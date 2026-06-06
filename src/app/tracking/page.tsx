@@ -1,0 +1,266 @@
+"use client";
+
+import React, { useEffect, useState, useRef } from "react";
+import { useAppState } from "@/context/StateContext";
+import { useAudio } from "@/context/AudioContext";
+import { TrackingMap } from "@/components/TrackingMap";
+import { Bike, ShieldAlert, Rocket, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+interface FloatingText {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+}
+
+export default function TrackingPage() {
+  const { play } = useAudio();
+  const router = useRouter();
+  const {
+    activeOrder,
+    boostCourier,
+    completeActiveOrder
+  } = useAppState();
+
+  const [combo, setCombo] = useState<number>(0);
+  const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
+  const comboDecayRef = useRef<NodeJS.Timeout | null>(null);
+
+  const hornPlayed = useRef<boolean>(false);
+  const bellPlayed = useRef<boolean>(false);
+
+  // Monitor progress for sound effect triggers
+  useEffect(() => {
+    if (!activeOrder) {
+      hornPlayed.current = false;
+      bellPlayed.current = false;
+      return;
+    }
+
+    const progress = activeOrder.deliveryProgress;
+
+    // Play horn when courier departs (around 45% progress)
+    if (progress >= 45 && progress < 100 && !hornPlayed.current) {
+      hornPlayed.current = true;
+      play("horn");
+    }
+
+    // Play doorbell when courier arrives (100% progress)
+    if (progress >= 100 && !bellPlayed.current) {
+      bellPlayed.current = true;
+      play("delivery");
+    }
+  }, [activeOrder, play]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (comboDecayRef.current) clearTimeout(comboDecayRef.current);
+    };
+  }, []);
+
+  if (!activeOrder) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center text-center space-y-5">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-500">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="font-extrabold text-white text-xl">No active deliveries!</h3>
+          <p className="text-zinc-500 max-w-xs text-xs">
+            Feed your brain first by placing a simulated order from our premium kitchens.
+          </p>
+        </div>
+        <Link href="/">
+          <button className="px-5 py-3 rounded-xl bg-gradient-to-r from-neon-pink to-neon-purple font-black text-xs uppercase tracking-widest text-white border-0 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:scale-105 transition-all">
+            Browse Kitchens
+          </button>
+        </Link>
+      </div>
+    );
+  }
+
+  const progress = activeOrder.deliveryProgress;
+  const isCompleted = progress >= 100;
+
+  // Status Ticker Messages
+  const getTickerMessage = (prog: number) => {
+    if (prog <= 15) return "Kitchen is aggressively chopping cyber-lettuce...";
+    if (prog <= 30) return "Chef is performing a ceremonial seasoning of the patty...";
+    if (prog <= 45) return "Assembling your simulated order with absolute care...";
+    if (prog <= 60) return "Courier dispatched! Speeding through red lights using quantum tunnels...";
+    if (prog <= 75) return "Courier is avoiding a giant neighborhood cat wearing sunglasses...";
+    if (prog <= 90) return "Courier is double-checking for napkins and sauces...";
+    if (prog <= 99) return "Courier is hovering in your front yard via jetpack...";
+    return "Arrived! Open the airlock and receive the dopamine rush!";
+  };
+
+  const handleBoostClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    boostCourier();
+    
+    // Add combo multiplier
+    setCombo(prev => {
+      const next = prev + 1;
+      
+      // Decay combo count if no clicks after 1.2 seconds
+      if (comboDecayRef.current) clearTimeout(comboDecayRef.current);
+      comboDecayRef.current = setTimeout(() => {
+        setCombo(0);
+      }, 1200);
+
+      return next;
+    });
+
+    // Create a floating combo text element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left + (Math.random() * 40 - 20);
+    const y = e.clientY - rect.top - 20;
+    
+    const newText: FloatingText = {
+      id: `${Date.now()}-${Math.random()}`,
+      x,
+      y,
+      text: combo > 4 ? `🔥 COMBO X${combo}! +${combo * 5} XP` : `🚀 BOOST! +10 XP`
+    };
+
+    setFloatingTexts(prev => [...prev, newText]);
+  };
+
+  const removeFloatingText = (id: string) => {
+    setFloatingTexts(prev => prev.filter(t => t.id !== id));
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8 pb-16">
+      
+      {/* Page Header */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-black uppercase tracking-wider">
+          <Bike className="h-3.5 w-3.5 animate-bounce" />
+          <span>Real-time Tracking</span>
+        </div>
+        <h1 className="text-3xl font-black text-white">Courier Live Hub</h1>
+        <p className="text-xs text-zinc-500">
+          Spam Turbo Boost to speed up delivery and earn points combos.
+        </p>
+      </div>
+
+      {/* SVG Tracking Map */}
+      <TrackingMap progress={progress} />
+
+      {/* Status Ticker Card */}
+      <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-neon-cyan" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Courier Status</span>
+        <div className="text-sm font-bold text-white text-neon-glow-cyan h-6 flex items-center">
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={getTickerMessage(progress)}
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -10, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {getTickerMessage(progress)}
+            </motion.span>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Control Area */}
+      <div className="flex flex-col items-center gap-6">
+        
+        {!isCompleted ? (
+          <div className="relative w-full max-w-sm">
+            {/* Turbo Boost Button */}
+            <button
+              onClick={handleBoostClick}
+              className="w-full py-5 rounded-2xl font-black text-base uppercase tracking-wider text-black border-2 border-transparent bg-gradient-to-r from-neon-yellow via-neon-green to-neon-cyan shadow-[0_0_25px_rgba(57,255,20,0.25)] hover:shadow-[0_0_35px_rgba(57,255,20,0.5)] active:scale-[0.97] transition-all relative overflow-hidden select-none flex items-center justify-center space-x-2"
+            >
+              <Rocket className="h-5 w-5 animate-pulse" />
+              <span>Spam Turbo Boost!</span>
+            </button>
+
+            {/* Floating text combo labels */}
+            <div className="absolute inset-0 pointer-events-none overflow-visible">
+              {floatingTexts.map(text => (
+                <motion.span
+                  key={text.id}
+                  initial={{ y: text.y, x: text.x, opacity: 1, scale: 0.8 }}
+                  animate={{ y: text.y - 80, opacity: 0, scale: 1.2 }}
+                  onAnimationComplete={() => removeFloatingText(text.id)}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="absolute text-xs font-black text-neon-green text-neon-glow-green drop-shadow-md select-none pointer-events-none bg-black/40 px-1.5 py-0.5 rounded border border-zinc-800"
+                >
+                  {text.text}
+                </motion.span>
+              ))}
+            </div>
+            
+            {/* Combo alert */}
+            {combo > 3 && (
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: [1, 1.15, 1] }}
+                className="text-center font-black text-neon-pink text-neon-glow-pink mt-3 text-sm animate-pulse"
+              >
+                🔥 COMBO FLAME X{combo}! Keep spamming!
+              </motion.div>
+            )}
+          </div>
+        ) : (
+          /* Arrived / Claim Rewards Button */
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-sm space-y-4"
+          >
+            <div className="p-4 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-bold text-center">
+              🎉 Delivery capsule secured! Open it for instant satisfaction.
+            </div>
+            
+            <button
+              onClick={() => {
+                completeActiveOrder();
+                router.push("/rewards");
+              }}
+              className="w-full py-5.5 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-neon-green shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:shadow-[0_0_35px_rgba(57,255,20,0.7)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
+            >
+              <span>Accept Delivery & Claim Reward (+{activeOrder.pointsEarned} XP)</span>
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Details Box */}
+      <div className="p-6 rounded-2xl border border-zinc-850 bg-zinc-900/40 text-xs text-zinc-500 space-y-4">
+        <h4 className="font-extrabold text-white text-sm uppercase tracking-wider border-b border-zinc-850 pb-2">
+          Receipt Details
+        </h4>
+        <div className="flex justify-between">
+          <span>Order Reference</span>
+          <span className="font-bold text-zinc-400">{activeOrder.id}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Kitchen Name</span>
+          <span className="font-bold text-zinc-400">{activeOrder.restaurantName}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Total Items</span>
+          <span className="font-bold text-zinc-400">
+            {activeOrder.items.reduce((s, i) => s + i.quantity, 0)} items
+          </span>
+        </div>
+        <div className="flex justify-between pt-2 border-t border-zinc-850/50">
+          <span>Brain Points Earned</span>
+          <span className="font-black text-neon-cyan">+{activeOrder.pointsEarned} XP</span>
+        </div>
+      </div>
+
+    </div>
+  );
+}
