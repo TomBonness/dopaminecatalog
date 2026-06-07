@@ -172,7 +172,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       <span>Carbon Offset / Tax</span>
                       <span className="text-white">${tax.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-base font-black text-white pt-2 border-t border-zinc-850">
+                    <div className="flex justify-between text-base font-black text-white pt-2 border-t border-zinc-800">
                       <span>Fake Total</span>
                       <span className="text-neon-pink text-neon-glow-pink">${total.toFixed(2)}</span>
                     </div>
@@ -187,7 +187,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                   <button
                     onClick={handleCheckout}
-                    className="w-full py-4.5 rounded-xl font-black text-sm uppercase tracking-wider text-black border-2 border-transparent bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(255,0,127,0.6)] animate-rainbow-glow active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
+                    className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider text-black border-2 border-transparent bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(255,0,127,0.6)] animate-rainbow-glow active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
                   >
                     <span>PLACE FREE ORDER (+{totalPoints} XP)</span>
                   </button>

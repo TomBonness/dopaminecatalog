@@ -103,7 +103,7 @@ export default function RewardsPage() {
         
         {/* Left Column: Lottery ticket widget */}
         <div className="md:col-span-1 space-y-6 flex flex-col items-center">
-          <div className="w-full p-5 rounded-2xl bg-zinc-900 border border-zinc-850 text-center space-y-4 shadow-md">
+          <div className="w-full p-5 rounded-2xl bg-zinc-900 border border-zinc-800 text-center space-y-4 shadow-md">
             <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-300">
               Serotonin Lottery
             </h3>
@@ -131,7 +131,7 @@ export default function RewardsPage() {
               <button
                 onClick={() => setTicketState("idle")}
                 disabled={ticketState !== "revealed"}
-                className="w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-white border border-zinc-850 hover:border-zinc-700 bg-zinc-950 hover:bg-zinc-900 transition-all disabled:opacity-40"
+                className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest text-white border border-zinc-800 hover:border-zinc-700 bg-zinc-950 hover:bg-zinc-900 transition-all disabled:opacity-40"
               >
                 Scratch Again
               </button>
@@ -161,8 +161,8 @@ export default function RewardsPage() {
 
         {/* Right Column: Badges & accomplishments */}
         <div className="md:col-span-2 space-y-6">
-          <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-6 shadow-md">
-            <div className="flex items-center space-x-2 border-b border-zinc-850 pb-3">
+          <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-6 shadow-md">
+            <div className="flex items-center space-x-2 border-b border-zinc-800 pb-3">
               <Award className="h-5 w-5 text-neon-pink" />
               <h3 className="font-black text-sm uppercase tracking-wider text-zinc-300">
                 Your Accomplishment Badges
@@ -180,7 +180,7 @@ export default function RewardsPage() {
                     className={`p-4 rounded-xl border flex flex-col items-center justify-between text-center gap-2.5 transition-all duration-300 select-none ${
                       isUnlocked
                         ? "bg-zinc-950 border-neon-pink shadow-[0_0_12px_rgba(255,0,127,0.1)] hover:shadow-[0_0_18px_rgba(255,0,127,0.25)]"
-                        : "bg-zinc-950/45 border-zinc-850/50 opacity-40 grayscale"
+                        : "bg-zinc-950/45 border-zinc-800/50 opacity-40 grayscale"
                     }`}
                   >
                     <span className="text-3xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">{badge.icon}</span>
@@ -208,7 +208,7 @@ export default function RewardsPage() {
       </div>
 
       {/* Addiction Analytics footer card */}
-      <div className="p-6 rounded-2xl border border-zinc-850 bg-zinc-900/30 grid grid-cols-1 sm:grid-cols-3 gap-6 shadow-sm">
+      <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/30 grid grid-cols-1 sm:grid-cols-3 gap-6 shadow-sm">
         <div className="space-y-1 text-center sm:text-left">
           <div className="flex items-center justify-center sm:justify-start space-x-1.5 text-zinc-500 text-xs font-black uppercase tracking-widest">
             <Coins className="h-3.5 w-3.5 text-neon-green" />

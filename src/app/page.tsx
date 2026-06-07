@@ -30,7 +30,7 @@ export default function HomePage() {
     <div className="space-y-8 pb-12">
       
       {/* Address Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4.5 rounded-2xl bg-zinc-900 border border-zinc-850">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
         <div className="flex items-center space-x-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-pink/10 border border-neon-pink/30 text-neon-pink shadow-[0_0_10px_rgba(255,0,127,0.15)] animate-pulse">
             <MapPin className="h-5 w-5" />
@@ -61,7 +61,7 @@ export default function HomePage() {
         {/* Money Saved */}
         <motion.div
           whileHover={{ y: -4 }}
-          className="p-5 rounded-2xl border border-zinc-850 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
+          className="p-5 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-5 text-4xl font-black text-neon-green">$$$</div>
           <span className="text-xs font-extrabold text-zinc-500 uppercase tracking-widest block">Money Saved</span>
@@ -76,7 +76,7 @@ export default function HomePage() {
         {/* Impulse Buys Avoided */}
         <motion.div
           whileHover={{ y: -4 }}
-          className="p-5 rounded-2xl border border-zinc-850 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
+          className="p-5 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-5 text-4xl font-black text-neon-pink">🛒</div>
           <span className="text-xs font-extrabold text-zinc-500 uppercase tracking-widest block">Impulses Deflected</span>
@@ -91,7 +91,7 @@ export default function HomePage() {
         {/* Total Badges */}
         <motion.div
           whileHover={{ y: -4 }}
-          className="p-5 rounded-2xl border border-zinc-850 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
+          className="p-5 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-5 text-4xl font-black text-neon-yellow">🏆</div>
           <span className="text-xs font-extrabold text-zinc-500 uppercase tracking-widest block">Unlocked Badges</span>
@@ -127,7 +127,7 @@ export default function HomePage() {
         </div>
 
         <Link href="/rewards" className="relative z-10">
-          <button className="py-4.5 px-6 rounded-xl font-black text-sm uppercase tracking-wider text-black bg-neon-yellow shadow-[0_0_15px_rgba(255,231,0,0.3)] hover:shadow-[0_0_25px_rgba(255,231,0,0.6)] hover:scale-105 active:scale-95 transition-all flex items-center space-x-2">
+          <button className="py-4 px-6 rounded-xl font-black text-sm uppercase tracking-wider text-black bg-neon-yellow shadow-[0_0_15px_rgba(255,231,0,0.3)] hover:shadow-[0_0_25px_rgba(255,231,0,0.6)] hover:scale-105 active:scale-95 transition-all flex items-center space-x-2">
             <span>Play Scratch-Offs</span>
             <ArrowRight className="h-4 w-4" />
           </button>
@@ -184,7 +184,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
               whileHover={{ y: -4 }}
-              className="group overflow-hidden rounded-2xl border border-zinc-850 bg-zinc-900/40 hover:border-zinc-750 transition-all duration-200"
+              className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 transition-all duration-200"
             >
               <Link href={`/restaurant/${restaurant.id}`} className="block relative">
                 {/* Image */}
@@ -219,14 +219,14 @@ export default function HomePage() {
                     </div>
                     
                     {/* Rating badge */}
-                    <div className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-zinc-905 border border-zinc-800 font-black text-xs text-neon-yellow shrink-0">
+                    <div className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 font-black text-xs text-neon-yellow shrink-0">
                       <Star className="h-3.5 w-3.5 fill-neon-yellow text-neon-yellow" />
                       <span>{restaurant.rating.toFixed(1)}</span>
                     </div>
                   </div>
 
                   {/* Delivery stats footer */}
-                  <div className="flex items-center justify-between text-xs font-bold text-zinc-400 pt-3 border-t border-zinc-850">
+                  <div className="flex items-center justify-between text-xs font-bold text-zinc-400 pt-3 border-t border-zinc-800">
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center space-x-1">
                         <Clock className="h-3.5 w-3.5 text-zinc-500" />

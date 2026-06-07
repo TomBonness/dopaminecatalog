@@ -30,7 +30,7 @@ export default function RestaurantPage() {
         <p className="text-zinc-500 max-w-xs">
           This restaurant seems to have glitched out of our cyber-catalog.
         </p>
-        <Link href="/" className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-850 hover:border-zinc-700 text-sm font-bold text-white transition">
+        <Link href="/" className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-sm font-bold text-white transition">
           Return to Hub
         </Link>
       </div>
@@ -135,7 +135,7 @@ export default function RestaurantPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: catIdx * 0.1 + itemIdx * 0.05 }}
                     onClick={() => handleItemClick(item)}
-                    className="p-4 rounded-2xl border border-zinc-850 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-900/50 transition-all duration-200 cursor-pointer flex flex-col justify-between group shadow-sm"
+                    className="p-4 rounded-2xl border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-900/50 transition-all duration-200 cursor-pointer flex flex-col justify-between group shadow-sm"
                   >
                     <div className="flex gap-4">
                       {/* Thumbnail */}
@@ -159,7 +159,7 @@ export default function RestaurantPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-zinc-850/50 mt-4 pt-3 text-xs">
+                    <div className="flex items-center justify-between border-t border-zinc-800/50 mt-4 pt-3 text-xs">
                       <span className="font-black text-white text-sm">
                         ${item.price.toFixed(2)}
                       </span>
@@ -175,8 +175,8 @@ export default function RestaurantPage() {
         </div>
 
         {/* Reviews panel */}
-        <div className="space-y-6 lg:border-l lg:border-zinc-850 lg:pl-8">
-          <div className="flex items-center space-x-2 border-b border-zinc-850 pb-3">
+        <div className="space-y-6 lg:border-l lg:border-zinc-800 lg:pl-8">
+          <div className="flex items-center space-x-2 border-b border-zinc-800 pb-3">
             <MessageSquare className="h-5 w-5 text-neon-cyan" />
             <h3 className="font-black text-sm uppercase tracking-wider text-zinc-300">
               Brain-Melt Reviews
@@ -187,7 +187,7 @@ export default function RestaurantPage() {
             {restaurant.reviews.map(review => (
               <div
                 key={review.id}
-                className="p-4 rounded-xl border border-zinc-850 bg-zinc-950/40 space-y-2.5"
+                className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 space-y-2.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-white">@{review.userName}</span>

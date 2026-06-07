@@ -152,7 +152,7 @@ export default function TrackingPage() {
       <TrackingMap progress={progress} />
 
       {/* Status Ticker Card */}
-      <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-850 space-y-3 shadow-lg relative overflow-hidden">
+      <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1.5 h-full bg-neon-cyan" />
         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Courier Status</span>
         <div className="text-sm font-bold text-white text-neon-glow-cyan h-6 flex items-center">
@@ -227,7 +227,7 @@ export default function TrackingPage() {
                 completeActiveOrder();
                 router.push("/rewards");
               }}
-              className="w-full py-5.5 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-neon-green shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:shadow-[0_0_35px_rgba(57,255,20,0.7)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-neon-green shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:shadow-[0_0_35px_rgba(57,255,20,0.7)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
             >
               <span>Accept Delivery & Claim Reward (+{activeOrder.pointsEarned} XP)</span>
               <ChevronRight className="h-5 w-5" />
@@ -237,8 +237,8 @@ export default function TrackingPage() {
       </div>
 
       {/* Details Box */}
-      <div className="p-6 rounded-2xl border border-zinc-850 bg-zinc-900/40 text-xs text-zinc-500 space-y-4">
-        <h4 className="font-extrabold text-white text-sm uppercase tracking-wider border-b border-zinc-850 pb-2">
+      <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/40 text-xs text-zinc-500 space-y-4">
+        <h4 className="font-extrabold text-white text-sm uppercase tracking-wider border-b border-zinc-800 pb-2">
           Receipt Details
         </h4>
         <div className="flex justify-between">
@@ -255,7 +255,7 @@ export default function TrackingPage() {
             {activeOrder.items.reduce((s, i) => s + i.quantity, 0)} items
           </span>
         </div>
-        <div className="flex justify-between pt-2 border-t border-zinc-850/50">
+        <div className="flex justify-between pt-2 border-t border-zinc-800/50">
           <span>Brain Points Earned</span>
           <span className="font-black text-neon-cyan">+{activeOrder.pointsEarned} XP</span>
         </div>
