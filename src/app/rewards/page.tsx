@@ -21,7 +21,9 @@ export default function RewardsPage() {
     dopamineRushActive,
     incrementQuestProgress,
     pointsToNextLevel,
-    level
+    level,
+    ownedUpgrades,
+    buyUpgrade
   } = useAppState();
   const [ticketState, setTicketState] = useState<"idle" | "purchased" | "revealed">("idle");
   const [resetKey, setResetKey] = useState<number>(0);
@@ -276,6 +278,117 @@ export default function RewardsPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Courier Upgrades Section */}
+      <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-6 shadow-md">
+        <div className="flex items-center space-x-2 border-b border-zinc-800 pb-3">
+          <ShoppingBag className="h-5 w-5 text-neon-yellow animate-pulse" />
+          <h3 className="font-black text-sm uppercase tracking-wider text-zinc-300">
+            Permanent Courier Upgrades
+          </h3>
+        </div>
+        <p className="text-xs text-zinc-500">
+          Invest your Dopamine Coins (DC) in cyber-parts to optimize your delivery speed, combo timings, and incident resistances.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              id: "neon-gps",
+              name: "Neon GPS Upgrade",
+              cost: 150,
+              levelReq: 2,
+              icon: "🛰️",
+              desc: "Direction minigames grant an extra +5% delivery progress bonus on success."
+            },
+            {
+              id: "turbo-battery",
+              name: "Turbo Battery",
+              cost: 250,
+              levelReq: 3,
+              icon: "🔋",
+              desc: "Extends Turbo Boost combo window to 2.5 seconds (default is 1.2s)."
+            },
+            {
+              id: "shock-absorbers",
+              name: "Shock Absorbers",
+              cost: 350,
+              levelReq: 5,
+              icon: "🏍️",
+              desc: "Failed or expired incidents no longer apply progress penalty."
+            },
+            {
+              id: "lucky-routing",
+              name: "Lucky Routing",
+              cost: 500,
+              levelReq: 7,
+              icon: "🍀",
+              desc: "Incident completions have a 25% chance of rolling +15 DC bonus."
+            }
+          ].map(upgrade => {
+            const isOwned = ownedUpgrades.includes(upgrade.id);
+            const isLevelLocked = level < upgrade.levelReq;
+            const canAfford = dopamineCoins >= upgrade.cost;
+
+            return (
+              <div
+                key={upgrade.id}
+                className={`p-5 rounded-xl border flex flex-col justify-between gap-3 text-left transition-all duration-300 select-none bg-zinc-950 ${
+                  isOwned
+                    ? "border-neon-green/50 shadow-[0_0_12px_rgba(57,255,20,0.15)]"
+                    : isLevelLocked
+                    ? "border-zinc-800/40 opacity-45"
+                    : "border-zinc-850 hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <span className="text-3xl">{upgrade.icon}</span>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase">Lvl {upgrade.levelReq} Req</span>
+                  </div>
+                  <h4 className="font-extrabold text-xs text-white uppercase tracking-wider">{upgrade.name}</h4>
+                  <p className="text-[10px] text-zinc-500 leading-normal">{upgrade.desc}</p>
+                </div>
+
+                <div className="pt-2 border-t border-zinc-900/60 flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400">
+                    <span>Cost:</span>
+                    <span className="text-neon-yellow">{upgrade.cost} DC</span>
+                  </div>
+
+                  {isOwned ? (
+                    <button
+                      disabled
+                      className="w-full py-2 rounded-lg font-black text-[10px] uppercase tracking-wider bg-neon-green/10 text-neon-green border border-neon-green/30"
+                    >
+                      Owned
+                    </button>
+                  ) : isLevelLocked ? (
+                    <button
+                      disabled
+                      className="w-full py-2 rounded-lg font-black text-[10px] uppercase tracking-wider bg-zinc-900 text-zinc-600 border border-zinc-800"
+                    >
+                      Lvl {upgrade.levelReq} Locked
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => buyUpgrade(upgrade.id)}
+                      disabled={!canAfford}
+                      className={`w-full py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border transition-all ${
+                        canAfford
+                          ? "bg-neon-yellow text-black border-transparent hover:shadow-[0_0_15px_rgba(255,231,0,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+                          : "bg-zinc-900 text-zinc-500 border-zinc-800 cursor-not-allowed"
+                      }`}
+                    >
+                      {canAfford ? "Purchase Upgrade" : "Insufficient DC"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Addiction Analytics footer card */}

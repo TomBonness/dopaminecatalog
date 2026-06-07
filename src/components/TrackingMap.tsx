@@ -3,12 +3,14 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Store, Home, Bike } from "lucide-react";
+import { useAppState } from "@/context/StateContext";
 
 interface TrackingMapProps {
   progress: number;
 }
 
 export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
+  const { activeOrder } = useAppState();
   // Path definition:
   // Waypoints:
   // 1. Restaurant: (40, 160)
@@ -46,6 +48,17 @@ export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
   };
 
   const coords = getCourierCoords(progress);
+
+  const getIncidentCoords = () => {
+    if (!activeOrder?.activeIncident) return null;
+    const prog = activeOrder.deliveryProgress;
+    if (prog <= 40) return { x: 120, y: 130, label: "GPS" };
+    if (prog <= 65) return { x: 200, y: 100, label: "Pothole" };
+    if (prog <= 85) return { x: 260, y: 50, label: "Gate" };
+    return { x: 316, y: 40, label: "Crisis" };
+  };
+
+  const incidentCoords = getIncidentCoords();
 
   return (
     <div className="relative w-full max-w-lg mx-auto bg-zinc-950 border border-zinc-800 rounded-3xl p-6 overflow-hidden aspect-[400/220]">
@@ -113,6 +126,15 @@ export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
             <Home className="h-4 w-4 text-neon-green" />
           </foreignObject>
         </g>
+
+        {/* Pulse Glow/Warning for active incidents */}
+        {incidentCoords && (
+          <g transform={`translate(${incidentCoords.x}, ${incidentCoords.y})`}>
+            <circle cx="0" cy="0" r="18" fill="none" stroke="#ff0055" strokeWidth="1.5" className="animate-ping" style={{ transformOrigin: `${incidentCoords.x}px ${incidentCoords.y}px`, animationDuration: "1.5s" }} />
+            <circle cx="0" cy="0" r="10" fill="#09090b" stroke="#ff0055" strokeWidth="2" className="shadow-[0_0_10px_#ff0055]" />
+            <path d="M 0 -4 L 0 1 M 0 3 L 0 4" stroke="#ff0055" strokeWidth="2" strokeLinecap="round" />
+          </g>
+        )}
 
         {/* Pulse Glow beneath Courier */}
         <circle cx={coords.x} cy={coords.y} r="20" fill="url(#glow)" className="animate-ping" style={{ animationDuration: "2s" }} />

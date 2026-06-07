@@ -23,7 +23,8 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
     cart,
     activeOrder,
     dopamineRushActive,
-    dopamineRushTimeLeft
+    dopamineRushTimeLeft,
+    ownedUpgrades
   } = useAppState();
 
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -77,6 +78,13 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
               <Coins className="h-3.5 w-3.5 sm:h-4 w-4 text-neon-yellow" />
               <span className="text-[10px] sm:text-xs font-black text-neon-glow-yellow">{dopamineCoins} <span className="hidden xs:inline">DC</span></span>
             </div>
+
+            {/* Owned Perks Indicator */}
+            {ownedUpgrades && ownedUpgrades.length > 0 && (
+              <div className="h-8 sm:h-10 hidden xs:flex items-center justify-center space-x-1 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-green/30 text-neon-green shadow-[0_0_10px_rgba(57,255,20,0.15)] select-none shrink-0">
+                <span className="text-[10px] sm:text-xs font-black">⚡ {ownedUpgrades.length} Perk{ownedUpgrades.length > 1 ? "s" : ""}</span>
+              </div>
+            )}
 
             {/* Mobile Level Pill */}
             <div className="md:hidden h-8 sm:h-10 flex items-center justify-center px-2 sm:px-3 rounded-lg sm:rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-neon-cyan shrink-0">

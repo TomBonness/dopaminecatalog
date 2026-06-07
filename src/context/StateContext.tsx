@@ -3,12 +3,98 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { MenuItem, MenuItemOption, Restaurant } from "@/lib/mockData";
 import { useAudio } from "./AudioContext";
+export const createIncident = (type: "gps" | "pothole" | "gatecode", level: number): Incident => {
+  const duration = 12000;
+  const expiresAt = Date.now() + duration;
+  const id = "inc_" + Math.random().toString(36).substring(2, 9);
+
+  if (type === "gps") {
+    const gpsPool = [
+      {
+        prompt: "Driver hit a neon alley fork. Which way avoids the drone traffic?",
+        options: ["Left Alley (High Voltage)", "Right Bypass (Drone Swarm)", "Center Underpass (Clear)"],
+        correctOptionIndex: 2
+      },
+      {
+        prompt: "A delivery drone is tailing the courier! What evasive maneuver should they take?",
+        options: ["Deceptive Decoy Drop", "S-Curve Speed Boost", "Chaff Flare Release"],
+        correctOptionIndex: 1
+      },
+      {
+        prompt: "GPS signal lost in the under-city grid! Select the manual correction sector:",
+        options: ["Sector E-1 (Industrial)", "Sector G-4 (Residential)", "Sector B-9 (Cyber-Bazaar)"],
+        correctOptionIndex: 0
+      }
+    ];
+    const item = gpsPool[Math.floor(Math.random() * gpsPool.length)];
+    return {
+      id,
+      type,
+      prompt: item.prompt,
+      options: item.options,
+      correctOptionIndex: item.correctOptionIndex,
+      expiresAt,
+      duration
+    };
+  } else if (type === "pothole") {
+    const symbols = ["▲", "▼", "◀", "▶", "●", "■"];
+    const sequence: string[] = [];
+    while (sequence.length < 3) {
+      const sym = symbols[Math.floor(Math.random() * symbols.length)];
+      if (!sequence.includes(sym)) {
+        sequence.push(sym);
+      }
+    }
+    return {
+      id,
+      type,
+      prompt: "Warning: Pothole field detected! Tap the sequence to calibrate hover shields:",
+      options: sequence,
+      correctOptionIndex: 0,
+      sequence,
+      expiresAt,
+      duration
+    };
+  } else {
+    const codes = ["#4F9C", "#7A2B", "#9E5D", "#3B8F", "#1C6E", "#8D4A"];
+    const targetCode = codes[Math.floor(Math.random() * codes.length)];
+    const incorrect1 = targetCode.substring(0, 3) + (targetCode[3] === "A" ? "B" : "A");
+    const incorrect2 = targetCode[0] + (targetCode[1] === "1" ? "2" : "1") + targetCode.substring(2);
+    
+    const options = [targetCode, incorrect1, incorrect2];
+    const correctOptionIndex = Math.floor(Math.random() * 3);
+    options[0] = options[correctOptionIndex];
+    options[correctOptionIndex] = targetCode;
+
+    return {
+      id,
+      type,
+      prompt: `Security gate at Neon Gated Heights! Match the passcode: ${targetCode}`,
+      options,
+      correctOptionIndex,
+      expiresAt,
+      duration
+    };
+  }
+};
 
 export interface CartItem {
   cartItemId: string; // unique ID including customization
   menuItem: MenuItem;
   selectedOptions: MenuItemOption[];
   quantity: number;
+}
+
+export interface Incident {
+  id: string;
+  type: "gps" | "pothole" | "gatecode";
+  prompt: string;
+  options: string[];
+  correctOptionIndex: number;
+  expiresAt: number;
+  duration: number;
+  sequence?: string[];
+  potholeSymbols?: string[];
 }
 
 export interface Order {
@@ -22,6 +108,11 @@ export interface Order {
   timestamp: number;
   deliveryProgress: number; // 0 to 100
   boostClicks: number;
+  activeIncident?: Incident | null;
+  resolvedIncidentCount: number;
+  failedIncidentCount: number;
+  incidentStreak: number;
+  triggeredMilestones?: number[];
 }
 
 export interface UserStats {
@@ -57,12 +148,14 @@ export interface QuestProgress {
   turboBoost: number;
   serotoninScratch: number;
   dopamineFeast: number;
+  crisisManager: number;
 }
 
 export interface QuestClaimed {
   turboBoost: boolean;
   serotoninScratch: boolean;
   dopamineFeast: boolean;
+  crisisManager: boolean;
 }
 
 interface StateContextProps {
@@ -86,6 +179,9 @@ interface StateContextProps {
   questClaimed: QuestClaimed;
   incrementQuestProgress: (questId: keyof QuestProgress, amount?: number) => void;
   claimQuestReward: (questId: keyof QuestProgress) => void;
+  ownedUpgrades: string[];
+  buyUpgrade: (upgradeId: string) => void;
+  resolveIncident: (success: boolean) => void;
   addToCart: (menuItem: MenuItem, options: MenuItemOption[], quantity: number) => void;
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, delta: number) => void;
@@ -123,12 +219,15 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     turboBoost: 0,
     serotoninScratch: 0,
     dopamineFeast: 0,
+    crisisManager: 0,
   });
   const [questClaimed, setQuestClaimed] = useState<QuestClaimed>({
     turboBoost: false,
     serotoninScratch: false,
     dopamineFeast: false,
+    crisisManager: false,
   });
+  const [ownedUpgrades, setOwnedUpgrades] = useState<string[]>([]);
 
   // Initialize from LocalStorage
   useEffect(() => {
@@ -185,7 +284,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const savedQuestProgress = localStorage.getItem("dopamine_quest_progress");
       if (savedQuestProgress) {
         try {
-          setQuestProgress(JSON.parse(savedQuestProgress) as QuestProgress);
+          const parsed = JSON.parse(savedQuestProgress) as QuestProgress;
+          setQuestProgress({
+            turboBoost: parsed.turboBoost || 0,
+            serotoninScratch: parsed.serotoninScratch || 0,
+            dopamineFeast: parsed.dopamineFeast || 0,
+            crisisManager: parsed.crisisManager || 0,
+          });
         } catch {
           // fallback
         }
@@ -193,9 +298,23 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const savedQuestClaimed = localStorage.getItem("dopamine_quest_claimed");
       if (savedQuestClaimed) {
         try {
-          setQuestClaimed(JSON.parse(savedQuestClaimed) as QuestClaimed);
+          const parsed = JSON.parse(savedQuestClaimed) as QuestClaimed;
+          setQuestClaimed({
+            turboBoost: !!parsed.turboBoost,
+            serotoninScratch: !!parsed.serotoninScratch,
+            dopamineFeast: !!parsed.dopamineFeast,
+            crisisManager: !!parsed.crisisManager,
+          });
         } catch {
           // fallback
+        }
+      }
+      const savedUpgrades = localStorage.getItem("dopamine_owned_upgrades");
+      if (savedUpgrades) {
+        try {
+          setOwnedUpgrades(JSON.parse(savedUpgrades) as string[]);
+        } catch {
+          setOwnedUpgrades([]);
         }
       }
     }
@@ -213,8 +332,9 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("dopamine_badges", JSON.stringify(unlockedBadges));
       localStorage.setItem("dopamine_quest_progress", JSON.stringify(questProgress));
       localStorage.setItem("dopamine_quest_claimed", JSON.stringify(questClaimed));
+      localStorage.setItem("dopamine_owned_upgrades", JSON.stringify(ownedUpgrades));
     }
-  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, questProgress, questClaimed, userId]);
+  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, questProgress, questClaimed, userId, ownedUpgrades]);
 
   // Dopamine Rush countdown timer effect
   useEffect(() => {
@@ -263,6 +383,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const hasActiveOrder = activeOrder !== null;
     if (!hasActiveOrder) return;
+    const currentLevel = Math.floor(points / 500) + 1;
 
     const interval = setInterval(() => {
       setActiveOrder(prev => {
@@ -272,16 +393,50 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return prev;
         }
         const nextProgress = Math.min(prev.deliveryProgress + 1, 100);
+        
+        let activeIncident = prev.activeIncident;
+        const triggeredMilestones = prev.triggeredMilestones || [];
+        const milestones = [25, 50, 75];
+        if (currentLevel >= 7) milestones.push(90);
+
+        let newTriggered = [...triggeredMilestones];
+        let incidentToTrigger: "gps" | "pothole" | "gatecode" | null = null;
+
+        for (const m of milestones) {
+          if (nextProgress >= m && !triggeredMilestones.includes(m)) {
+            newTriggered.push(m);
+            if (m === 25 && currentLevel >= 2) {
+              incidentToTrigger = "gps";
+            } else if (m === 50 && currentLevel >= 3) {
+              incidentToTrigger = "pothole";
+            } else if (m === 75 && currentLevel >= 5) {
+              incidentToTrigger = "gatecode";
+            } else if (m === 90 && currentLevel >= 7) {
+              const pool: ("gps" | "pothole" | "gatecode")[] = ["gps"];
+              if (currentLevel >= 3) pool.push("pothole");
+              if (currentLevel >= 5) pool.push("gatecode");
+              incidentToTrigger = pool[Math.floor(Math.random() * pool.length)];
+            }
+            break;
+          }
+        }
+
+        if (incidentToTrigger && !activeIncident) {
+          activeIncident = createIncident(incidentToTrigger, currentLevel);
+        }
+
         return {
           ...prev,
           deliveryProgress: nextProgress,
-          status: nextProgress >= 100 ? "completed" : prev.status
+          status: nextProgress >= 100 ? "completed" : prev.status,
+          activeIncident,
+          triggeredMilestones: newTriggered
         };
       });
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [activeOrder !== null]);
+  }, [activeOrder !== null, points]);
 
   // Synchronize stats with AWS backend endpoint
   const syncStatsWithServer = useCallback(async () => {
@@ -439,6 +594,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         turboBoost: 15,
         serotoninScratch: 1,
         dopamineFeast: 1,
+        crisisManager: 3,
       };
       const maxVal = limits[questId];
       if (prev[questId] >= maxVal) return prev;
@@ -454,11 +610,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       turboBoost: 15,
       serotoninScratch: 1,
       dopamineFeast: 1,
+      crisisManager: 3,
     };
     const rewards: Record<keyof QuestProgress, { xp: number; coins: number }> = {
       turboBoost: { xp: 150, coins: 50 },
       serotoninScratch: { xp: 100, coins: 30 },
       dopamineFeast: { xp: 200, coins: 60 },
+      crisisManager: { xp: 250, coins: 80 },
     };
 
     setQuestProgress(currProgress => {
@@ -510,7 +668,11 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       coinsEarned: coinsEarned,
       timestamp: Date.now(),
       deliveryProgress: 0,
-      boostClicks: 0
+      boostClicks: 0,
+      resolvedIncidentCount: 0,
+      failedIncidentCount: 0,
+      incidentStreak: 0,
+      triggeredMilestones: []
     };
 
     setActiveOrder(newOrder);
@@ -551,11 +713,44 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Quest updates
     incrementQuestProgress("turboBoost", 1);
 
+    const currentLevel = Math.floor(points / 500) + 1;
+
     setActiveOrder(prev => {
       if (!prev) return null;
       const newClicks = prev.boostClicks + 1;
-      // Faster progression with each boost click (+4% progress per click)
       const nextProgress = Math.min(prev.deliveryProgress + 4, 100);
+      
+      let activeIncident = prev.activeIncident;
+      const triggeredMilestones = prev.triggeredMilestones || [];
+      const milestones = [25, 50, 75];
+      if (currentLevel >= 7) milestones.push(90);
+
+      let newTriggered = [...triggeredMilestones];
+      let incidentToTrigger: "gps" | "pothole" | "gatecode" | null = null;
+
+      for (const m of milestones) {
+        if (nextProgress >= m && !triggeredMilestones.includes(m)) {
+          newTriggered.push(m);
+          if (m === 25 && currentLevel >= 2) {
+            incidentToTrigger = "gps";
+          } else if (m === 50 && currentLevel >= 3) {
+            incidentToTrigger = "pothole";
+          } else if (m === 75 && currentLevel >= 5) {
+            incidentToTrigger = "gatecode";
+          } else if (m === 90 && currentLevel >= 7) {
+            const pool: ("gps" | "pothole" | "gatecode")[] = ["gps"];
+            if (currentLevel >= 3) pool.push("pothole");
+            if (currentLevel >= 5) pool.push("gatecode");
+            incidentToTrigger = pool[Math.floor(Math.random() * pool.length)];
+          }
+          break;
+        }
+      }
+
+      if (incidentToTrigger && !activeIncident) {
+        activeIncident = createIncident(incidentToTrigger, currentLevel);
+      }
+
       if (newClicks >= 20) {
         setTimeout(() => unlockBadge("speed-demon"), 200);
       }
@@ -563,10 +758,126 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...prev,
         boostClicks: newClicks,
         deliveryProgress: nextProgress,
-        status: nextProgress >= 100 ? "completed" : prev.status
+        status: nextProgress >= 100 ? "completed" : prev.status,
+        activeIncident,
+        triggeredMilestones: newTriggered
       };
     });
   };
+
+  const resolveIncident = useCallback((success: boolean) => {
+    const currentLevel = Math.floor(points / 500) + 1;
+    setActiveOrder(prev => {
+      if (!prev || !prev.activeIncident) return prev;
+      
+      const type = prev.activeIncident.type;
+      let newStreak = prev.incidentStreak || 0;
+      let resolvedCount = prev.resolvedIncidentCount || 0;
+      let failedCount = prev.failedIncidentCount || 0;
+      let nextProgress = prev.deliveryProgress;
+
+      if (success) {
+        play("boost");
+        newStreak += 1;
+        resolvedCount += 1;
+        
+        let xpReward = 20;
+        let dcReward = 5;
+        let progressBonus = 8;
+
+        if (type === "pothole") {
+          xpReward = 35;
+          dcReward = 8;
+          progressBonus = 12;
+        } else if (type === "gatecode") {
+          xpReward = 50;
+          dcReward = 15;
+          progressBonus = 15;
+        }
+
+        if (type === "gps" && ownedUpgrades.includes("neon-gps")) {
+          progressBonus += 5;
+        }
+
+        if (currentLevel >= 7) {
+          xpReward = Math.floor(xpReward * 1.5);
+          dcReward = Math.floor(dcReward * 1.5);
+        }
+
+        if (ownedUpgrades.includes("lucky-routing")) {
+          if (Math.random() < 0.25) {
+            dcReward += 15;
+          }
+        }
+
+        const multiplier = dopamineRushActive ? 2 : 1;
+        xpReward *= multiplier;
+        dcReward *= multiplier;
+
+        setPoints(p => p + xpReward);
+        setDopamineCoins(c => Math.max(0, c + dcReward));
+
+        nextProgress = Math.min(nextProgress + progressBonus, 100);
+        incrementQuestProgress("crisisManager", 1);
+      } else {
+        play("horn");
+        newStreak = 0;
+        failedCount += 1;
+
+        if (!ownedUpgrades.includes("shock-absorbers")) {
+          let penalty = 5;
+          if (type === "pothole") penalty = 8;
+          else if (type === "gatecode") penalty = 10;
+          nextProgress = Math.max(0, nextProgress - penalty);
+        }
+      }
+
+      return {
+        ...prev,
+        deliveryProgress: nextProgress,
+        status: nextProgress >= 100 ? "completed" : prev.status,
+        activeIncident: null,
+        incidentStreak: newStreak,
+        resolvedIncidentCount: resolvedCount,
+        failedIncidentCount: failedCount
+      };
+    });
+  }, [play, ownedUpgrades, points, dopamineRushActive, incrementQuestProgress]);
+
+  const buyUpgrade = useCallback((upgradeId: string) => {
+    const prices: Record<string, number> = {
+      "neon-gps": 150,
+      "turbo-battery": 250,
+      "shock-absorbers": 350,
+      "lucky-routing": 500
+    };
+    const levelReqs: Record<string, number> = {
+      "neon-gps": 2,
+      "turbo-battery": 3,
+      "shock-absorbers": 5,
+      "lucky-routing": 7
+    };
+
+    const price = prices[upgradeId] || 0;
+    const req = levelReqs[upgradeId] || 1;
+    const currentLevel = Math.floor(points / 500) + 1;
+
+    if (currentLevel < req) {
+      play("lock");
+      return;
+    }
+    if (dopamineCoins < price) {
+      play("lock");
+      return;
+    }
+    if (ownedUpgrades.includes(upgradeId)) {
+      return;
+    }
+
+    play("checkout");
+    setDopamineCoins(prev => Math.max(0, prev - price));
+    setOwnedUpgrades(prev => [...prev, upgradeId]);
+  }, [points, dopamineCoins, ownedUpgrades, play]);
 
   // Complete delivery
   const completeActiveOrder = () => {
@@ -594,13 +905,16 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setQuestProgress({
       turboBoost: 0,
       serotoninScratch: 0,
-      dopamineFeast: 0
+      dopamineFeast: 0,
+      crisisManager: 0
     });
     setQuestClaimed({
       turboBoost: false,
       serotoninScratch: false,
-      dopamineFeast: false
+      dopamineFeast: false,
+      crisisManager: false
     });
+    setOwnedUpgrades([]);
     if (typeof window !== "undefined") {
       localStorage.setItem("dopamine_points", "100");
       localStorage.setItem("dopamine_coins", "100");
@@ -611,15 +925,18 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("dopamine_cart", JSON.stringify([]));
       localStorage.removeItem("dopamine_active_order");
       localStorage.removeItem("dopamine_rush_expires_at");
+      localStorage.setItem("dopamine_owned_upgrades", JSON.stringify([]));
       localStorage.setItem("dopamine_quest_progress", JSON.stringify({
         turboBoost: 0,
         serotoninScratch: 0,
-        dopamineFeast: 0
+        dopamineFeast: 0,
+        crisisManager: 0
       }));
       localStorage.setItem("dopamine_quest_claimed", JSON.stringify({
         turboBoost: false,
         serotoninScratch: false,
-        dopamineFeast: false
+        dopamineFeast: false,
+        crisisManager: false
       }));
     }
   };
@@ -658,7 +975,10 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addCoins,
         unlockBadge,
         syncStatsWithServer,
-        resetStats
+        resetStats,
+        ownedUpgrades,
+        buyUpgrade,
+        resolveIncident
       }}
     >
       {children}

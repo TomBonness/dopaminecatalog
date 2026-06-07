@@ -108,7 +108,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               id: "turboBoost" as const,
@@ -133,6 +133,14 @@ export default function HomePage() {
               current: questProgress.dopamineFeast,
               target: 1,
               reward: "+200 XP & +60 DC",
+            },
+            {
+              id: "crisisManager" as const,
+              title: "Crisis Manager",
+              desc: "Resolve 3 delivery incidents.",
+              current: questProgress.crisisManager || 0,
+              target: 3,
+              reward: "+250 XP & +80 DC",
             },
           ].map(quest => {
             const isCompleted = quest.current >= quest.target;
@@ -215,6 +223,24 @@ export default function HomePage() {
           })}
         </div>
       </div>
+
+      {/* Courier Crisis Training Teaser */}
+      {level < 3 && (
+        <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-neon-pink" />
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">🚨</span>
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-400 block">Courier Crisis Alert</span>
+          </div>
+          <p className="text-xs text-zinc-300 font-semibold leading-relaxed">
+            {level < 2 ? (
+              <span>Reach Level 2 to unlock <span className="text-neon-pink">GPS Glitch Minigames</span>! You will assist couriers in navigating chaotic neon alleyway grids in real-time.</span>
+            ) : (
+              <span>New Minigame Unlocked! Help your driver navigate neon forks or tap out pothole coordinates to maintain your <span className="text-neon-yellow">Crisis Streak</span>!</span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* 2. Category Scroll (horizontal quick filters moved to the top) */}
       <div className="space-y-3">
