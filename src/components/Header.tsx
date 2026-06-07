@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
               className="relative flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg bg-gradient-to-r from-neon-pink to-neon-purple text-white font-extrabold text-sm border-0 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:shadow-[0_0_20px_rgba(255,0,127,0.6)] hover:scale-105 active:scale-95 transition-all duration-150"
             >
               <ShoppingBag className="h-4 w-4" />
-              <span className="hidden sm:inline">Feed Brain</span>
+              <span className="hidden sm:inline">View Cart</span>
               {totalCartItems > 0 && (
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black text-neon-pink shadow-md animate-bounce">
                   {totalCartItems}

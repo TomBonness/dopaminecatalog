@@ -123,7 +123,7 @@ export default function RewardsPage() {
                 disabled={points < TICKET_COST}
                 className="w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-black bg-neon-yellow hover:shadow-[0_0_20px_rgba(255,231,0,0.5)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:shadow-none hover:scale-102 transition-all"
               >
-                Buy Ticket (85 XP)
+                Buy Ticket (80 XP)
               </button>
             )}
 

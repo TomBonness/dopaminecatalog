@@ -68,7 +68,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
             <motion.div
               ref={drawerRef}
-              className="w-screen max-w-md border-l border-zinc-800 bg-zinc-900/95 shadow-2xl flex flex-col"
+              className="w-screen max-w-md border-l border-zinc-800 bg-zinc-900/95 shadow-2xl flex flex-col h-[100dvh]"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

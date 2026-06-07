@@ -107,7 +107,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex sm:items-center items-end justify-center sm:p-4 p-0">
         {/* Backdrop */}
         <motion.div
           className="fixed inset-0 bg-black/80 backdrop-blur-sm"
@@ -119,7 +119,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
         {/* Modal Content */}
         <motion.div
-          className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+          className="relative w-full max-w-lg overflow-hidden sm:rounded-2xl rounded-t-3xl border border-zinc-800 bg-zinc-900 shadow-[0_0_30px_rgba(0,0,0,0.8)] max-h-[90dvh] flex flex-col"
           initial={{ scale: 0.95, y: 20, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
           exit={{ scale: 0.95, y: 20, opacity: 0 }}
@@ -153,7 +153,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           </div>
 
           {/* Content Scroll Area */}
-          <div className="max-h-[60vh] overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <p className="text-sm text-zinc-400 leading-relaxed">{item.description}</p>
 
             {/* Option Groups */}
@@ -253,7 +253,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
               disabled={isAddDisabled()}
               className="flex-1 max-w-xs py-4 px-6 rounded-xl font-black text-sm uppercase tracking-wider text-white border-0 bg-gradient-to-r from-neon-pink to-neon-purple shadow-[0_0_20px_rgba(255,0,127,0.3)] hover:shadow-[0_0_30px_rgba(255,0,127,0.6)] disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-600 disabled:shadow-none hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
-              Feed My Brain (+{dopamineEarned})
+              Add to Order (+{dopamineEarned})
             </button>
           </div>
         </motion.div>
