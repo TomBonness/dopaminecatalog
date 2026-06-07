@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppState } from "@/context/StateContext";
-import { Trophy, ShoppingBag, Gift, MapPin } from "lucide-react";
+import { Trophy, ShoppingBag, Gift, MapPin, Coins } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface HeaderProps {
@@ -15,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
   const pathname = usePathname();
   const {
     points,
+    dopamineCoins,
     level,
     rankName,
     pointsPercent,
@@ -58,6 +59,11 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
 
           {/* Navigation & Controls */}
           <nav className="flex items-center space-x-2 sm:space-x-4">
+            {/* Dopamine Coins Indicator */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-neon-yellow/30 text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.15)] select-none hover:shadow-[0_0_15px_rgba(255,231,0,0.3)] transition-all shrink-0">
+              <Coins className="h-4 w-4 text-neon-yellow" />
+              <span className="text-xs font-black text-neon-glow-yellow">{dopamineCoins} <span className="hidden xs:inline">DC</span></span>
+            </div>
             {/* Mobile Level Pill */}
             <div className="md:hidden flex flex-col items-end shrink-0">
               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Points</span>

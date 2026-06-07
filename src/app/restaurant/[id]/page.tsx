@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MOCK_RESTAURANTS, MenuItem, MenuItemOption } from "@/lib/mockData";
 import { useAppState } from "@/context/StateContext";
-import { Star, Clock, ArrowLeft, Heart, MessageSquare } from "lucide-react";
+import { useAudio } from "@/context/AudioContext";
+import { Star, Clock, ArrowLeft, Heart, MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ItemModal } from "@/components/ItemModal";
@@ -13,14 +14,43 @@ import Image from "next/image";
 export default function RestaurantPage() {
   const params = useParams();
   const router = useRouter();
-  const { addToCart } = useAppState();
-
+  const { addToCart, level } = useAppState();
+  const { play } = useAudio();
   const id = typeof params?.id === "string" ? params.id : "";
   const restaurant = MOCK_RESTAURANTS.find(r => r.id === id);
 
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [liked, setLiked] = useState(false);
+  const isLocked = restaurant && level < restaurant.levelRequired;
+
+  React.useEffect(() => {
+    if (isLocked) {
+      play("lock");
+    }
+  }, [isLocked, play]);
+
+  if (restaurant && isLocked) {
+    return (
+      <div className="h-[70vh] flex flex-col items-center justify-center text-center space-y-6 px-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-950/80 border border-neon-pink/50 text-neon-pink shadow-[0_0_20px_rgba(255,0,127,0.3)] animate-pulse">
+          <Lock className="h-8 w-8" />
+        </div>
+        <div className="space-y-2 max-w-sm">
+          <h3 className="font-black text-2xl text-white tracking-wide uppercase text-neon-glow-pink">Access Denied</h3>
+          <p className="text-zinc-400 text-xs leading-relaxed">
+            This kitchen is restricted. You must reach <span className="font-extrabold text-neon-pink">Level {restaurant.levelRequired}</span> to access its menu.
+          </p>
+          <div className="py-2.5 px-4 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-500 font-bold">
+            Current Level: <span className="text-white font-extrabold">{level}</span>
+          </div>
+        </div>
+        <Link href="/" className="px-6 py-3 rounded-xl bg-gradient-to-r from-neon-pink to-neon-purple text-xs font-black uppercase tracking-widest text-white border-0 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:scale-105 active:scale-95 transition-all">
+          Return to Hub
+        </Link>
+      </div>
+    );
+  }
 
   if (!restaurant) {
     return (

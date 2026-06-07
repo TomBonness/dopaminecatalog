@@ -23,6 +23,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [scratchedPercent, setScratchedPercent] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [coinPos, setCoinPos] = useState<{ x: number; y: number } | null>(null);
   const lastSoundTime = useRef<number>(0);
 
   // Initialize/reset canvas overlay
@@ -77,6 +78,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     ctx.beginPath();
     ctx.arc(x, y, 16, 0, Math.PI * 2);
     ctx.fill();
+    setCoinPos({ x, y });
 
     // Play scratch sound (throttled to once every 120ms)
     const now = Date.now();
@@ -108,23 +110,24 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     }
   };
 
-  const handleMouseDown = () => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
+    scratch(e.clientX, e.clientY);
   };
-
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     scratch(e.clientX, e.clientY);
   };
-
   const handleMouseUp = () => {
     setIsDrawing(false);
+    setCoinPos(null);
   };
-
-  const handleTouchStart = () => {
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
+    if (e.touches.length > 0) {
+      scratch(e.touches[0].clientX, e.touches[0].clientY);
+    }
   };
-
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || e.touches.length === 0) return;
     const touch = e.touches[0];
@@ -158,10 +161,22 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
-        className={`absolute inset-0 z-10 cursor-crosshair transition-opacity duration-300 ${
+        className={`absolute inset-0 z-10 cursor-none touch-none transition-opacity duration-300 ${
           finished ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       />
+      {/* Tactile Follow Coin cursor */}
+      {isDrawing && coinPos && !finished && (
+        <div
+          className="absolute pointer-events-none z-20 w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 border-2 border-yellow-300 flex items-center justify-center font-extrabold text-xs text-zinc-950 shadow-[0_0_15px_rgba(234,179,8,0.8)] select-none"
+          style={{
+            left: coinPos.x - 16,
+            top: coinPos.y - 16,
+          }}
+        >
+          ¢
+        </div>
+      )}
     </div>
   );
 };

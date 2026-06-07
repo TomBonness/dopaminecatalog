@@ -47,6 +47,7 @@ export interface Restaurant {
     items: MenuItem[];
   }[];
   reviews: Review[];
+  levelRequired: number;
 }
 
 export const CATEGORIES = [
@@ -61,6 +62,7 @@ export const CATEGORIES = [
 export const MOCK_RESTAURANTS: Restaurant[] = [
   {
     id: "mega-burger-corp",
+    levelRequired: 1,
     name: "Mega Burger Corp™",
     description: "Industrial strength cheese-melts & 100% simulated wagyu euphoria.",
     rating: 4.9,
@@ -159,6 +161,7 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
   },
   {
     id: "neon-tokyo-sushi",
+    levelRequired: 3,
     name: "Neon Tokyo Sushi 🏮",
     description: "Cyberpunk rolls, electric wasabi, and high-frequency umami.",
     rating: 4.8,
@@ -216,6 +219,7 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
   },
   {
     id: "pacos-taco-palace",
+    levelRequired: 5,
     name: "Paco's Taco Palace 🌮",
     description: "Maximum spice street food designed to reboot your nervous system.",
     rating: 4.7,
@@ -273,6 +277,7 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
   },
   {
     id: "neon-sweet-heaven",
+    levelRequired: 7,
     name: "Neon Sweet Heaven 🍰",
     description: "Decadent sugary portals into pure happiness.",
     rating: 4.9,

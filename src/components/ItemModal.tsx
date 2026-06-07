@@ -119,7 +119,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
         {/* Modal Content */}
         <motion.div
-          className="relative w-full max-w-lg overflow-hidden sm:rounded-2xl rounded-t-3xl border border-zinc-800 bg-zinc-900 shadow-[0_0_30px_rgba(0,0,0,0.8)] max-h-[90dvh] flex flex-col"
+          className="relative w-full max-w-lg overflow-hidden sm:rounded-2xl rounded-t-2xl border border-zinc-800 bg-zinc-900 shadow-[0_0_30px_rgba(0,0,0,0.8)] max-h-[90dvh] flex flex-col"
           initial={{ scale: 0.95, y: 20, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
           exit={{ scale: 0.95, y: 20, opacity: 0 }}

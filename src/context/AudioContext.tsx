@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef } from "react";
 
-export type SoundType = "pop" | "checkout" | "delivery" | "horn" | "boost" | "rankup" | "scratch";
+export type SoundType = "pop" | "checkout" | "delivery" | "horn" | "boost" | "rankup" | "scratch" | "lock";
 
 interface AudioContextProps {
   play: (type: SoundType) => void;
@@ -211,6 +211,34 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     noiseNode.start();
     noiseNode.stop(ctx.currentTime + 0.08);
   };
+  const synthesizeLock = (ctx: AudioContext) => {
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = "sawtooth";
+    osc1.frequency.setValueAtTime(120, now);
+    osc2.type = "sawtooth";
+    osc2.frequency.setValueAtTime(123, now);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(600, now);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.25);
+    osc2.stop(now + 0.25);
+  };
 
   const play = (type: SoundType) => {
     initAudio();
@@ -239,6 +267,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           break;
         case "scratch":
           synthesizeScratch(ctx);
+          break;
+        case "lock":
+          synthesizeLock(ctx);
           break;
       }
     } catch (e) {

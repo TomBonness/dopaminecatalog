@@ -11,76 +11,69 @@ export default function RewardsPage() {
   const { play } = useAudio();
   const {
     points,
+    dopamineCoins,
     unlockedBadges,
     addPoints,
+    addCoins,
     unlockBadge,
     moneySaved,
     impulsiveDecisionsAvoided
   } = useAppState();
-
   const [ticketState, setTicketState] = useState<"idle" | "purchased" | "revealed">("idle");
   const [resetKey, setResetKey] = useState<number>(0);
   const [rewardText, setRewardText] = useState<string>("");
-  const [rewardValue, setRewardValue] = useState<{ type: "points" | "badge"; val: number | string } | null>(null);
-
+  const [rewardValue, setRewardValue] = useState<{ type: "reward" | "badge"; xp: number; coins: number; val?: string } | null>(null);
   const TICKET_COST = 80;
-
   const handleBuyTicket = () => {
-    if (points < TICKET_COST) {
-      alert("You need at least 80 XP to purchase a Serotonin Lottery Ticket! Place more orders to earn XP.");
+    if (dopamineCoins < TICKET_COST) {
+      alert("You need at least 80 Dopamine Coins to purchase a Serotonin Lottery Ticket! Place more orders to earn coins.");
       return;
     }
-
     play("pop");
-    // Deduct ticket cost (we add negative points)
-    addPoints(-TICKET_COST);
-
+    // Deduct ticket cost from spendable coins
+    addCoins(-TICKET_COST);
     // Roll reward
     const roll = Math.random();
     let text = "";
-    let value: { type: "points" | "badge"; val: number | string };
+    let value: { type: "reward" | "badge"; xp: number; coins: number; val?: string };
 
     if (roll < 0.6) {
-      // Common points reward: 50, 100, 150, 200
-      const amounts = [50, 100, 150, 200];
-      const amount = amounts[Math.floor(Math.random() * amounts.length)];
-      text = `+${amount} Brain Points`;
-      value = { type: "points", val: amount };
+      // Common reward: XP and DC
+      const amountsXP = [50, 100, 150];
+      const amountsCoins = [20, 30, 40];
+      const xp = amountsXP[Math.floor(Math.random() * amountsXP.length)];
+      const coins = amountsCoins[Math.floor(Math.random() * amountsCoins.length)];
+      text = `+${xp} XP & +${coins} DC`;
+      value = { type: "reward", xp, coins };
     } else if (roll < 0.85) {
-      // Jackpot points: 300, 500
-      const amounts = [300, 500];
-      const amount = amounts[Math.floor(Math.random() * amounts.length)];
-      text = `🌟 JACKPOT! +${amount} XP`;
-      value = { type: "points", val: amount };
+      // Jackpot points: XP & Coins
+      const xp = 300;
+      const coins = 100;
+      text = `🌟 JACKPOT! +${xp} XP & +${coins} DC`;
+      value = { type: "reward", xp, coins };
     } else {
-      // Badge reward
-      text = "🎰 Lucky Gambler Badge!";
-      value = { type: "badge", val: "lucky-gambler" };
+      // Badge reward + some XP & Coins
+      text = "🎰 Lucky Gambler Badge! +100 XP & +50 DC";
+      value = { type: "badge", xp: 100, coins: 50, val: "lucky-gambler" };
     }
-
     setRewardText(text);
     setRewardValue(value);
     setResetKey(prev => prev + 1);
     setTicketState("purchased");
   };
-
   const handleScratchComplete = () => {
     if (!rewardValue) return;
-
     // Trigger reward payout
-    if (rewardValue.type === "points") {
-      addPoints(Number(rewardValue.val));
-      play("rankup");
-    } else if (rewardValue.type === "badge") {
-      unlockBadge(String(rewardValue.val));
-      play("rankup");
+    addPoints(rewardValue.xp);
+    addCoins(rewardValue.coins);
+    play("rankup");
+    if (rewardValue.type === "badge" && rewardValue.val) {
+      unlockBadge(rewardValue.val);
     }
-
     // Automatically unlock lucky-gambler since they completed a scratchcard successfully
     setTimeout(() => {
       unlockBadge("lucky-gambler");
     }, 800);
-
     setTicketState("revealed");
   };
 
@@ -101,43 +94,65 @@ export default function RewardsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Left Column: Lottery ticket widget */}
+        {/* Left Column: Arcade-style slot machine ticket widget */}
         <div className="md:col-span-1 space-y-6 flex flex-col items-center">
-          <div className="w-full p-5 rounded-2xl bg-zinc-900 border border-zinc-800 text-center space-y-4 shadow-md">
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-300">
-              Serotonin Lottery
-            </h3>
-            
-            <p className="text-[11px] text-zinc-500 leading-normal">
-              Spend 80 XP for a scratch-off ticket. Win up to +500 XP or unlock the legendary Lucky Gambler badge!
-            </p>
-
-            <div className="h-10 w-full flex items-center justify-center bg-zinc-950 border border-zinc-800 rounded-xl">
-              <span className="text-xs text-zinc-400 font-bold">Your Balance: </span>
-              <span className="text-sm font-black text-neon-cyan text-neon-glow-cyan ml-1.5">{points} XP</span>
+          <div className="w-full p-6 rounded-3xl bg-zinc-950 border-4 border-neon-pink shadow-[0_0_30px_rgba(255,0,127,0.35)] relative overflow-hidden flex flex-col items-stretch text-center space-y-5">
+            {/* Blinking arcade lights top border */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 flex justify-between px-4 bg-zinc-900 border-b border-zinc-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-neon-yellow animate-ping" />
+              <span className="h-1.5 w-1.5 rounded-full bg-neon-pink animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-neon-cyan animate-ping" />
+              <span className="h-1.5 w-1.5 rounded-full bg-neon-purple animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-neon-green animate-ping" />
             </div>
-
+            <div className="pt-2">
+              <h3 className="font-black text-base uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-neon-yellow to-neon-cyan text-neon-glow-pink">
+                Serotonin Slot
+              </h3>
+              <span className="text-[9px] font-black text-zinc-500 tracking-wider block">MODEL-950 EUPHORIA</span>
+            </div>
+            <p className="text-[11px] text-zinc-400 leading-normal px-2">
+              Feed <span className="text-neon-yellow font-extrabold">80 DC</span> into the slot to print a scratch card. Jackpot yields up to <span className="text-neon-cyan font-extrabold">+300 XP & +100 DC</span>!
+            </p>
+            {/* Custom Ticket Slot Insert */}
+            <div className="py-2.5 bg-zinc-900/60 rounded-2xl border border-zinc-800/80 flex flex-col items-center justify-center">
+              <div className="border-2 border-zinc-700 bg-zinc-950 h-6 w-36 rounded-md shadow-[0_0_12px_rgba(255,0,127,0.2)] relative flex items-center justify-center overflow-hidden">
+                {/* Glowing insertion slide */}
+                <div className="absolute left-1/2 -translate-x-1/2 h-1 w-24 bg-neon-yellow animate-pulse" />
+              </div>
+              <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-black mt-2 animate-pulse">
+                Dopamine Ticket Slot
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="h-10 w-full flex items-center justify-center bg-zinc-900/40 border border-zinc-800/60 rounded-xl">
+                <span className="text-xs text-zinc-400 font-bold">Balance: </span>
+                <span className="text-sm font-black text-neon-yellow text-neon-glow-yellow ml-1.5">{dopamineCoins} DC</span>
+              </div>
+              <div className="h-10 w-full flex items-center justify-center bg-zinc-900/40 border border-zinc-800/60 rounded-xl">
+                <span className="text-xs text-zinc-400 font-bold">XP Level: </span>
+                <span className="text-sm font-black text-neon-cyan text-neon-glow-cyan ml-1.5">{points} XP</span>
+              </div>
+            </div>
             {ticketState === "idle" && (
               <button
                 onClick={handleBuyTicket}
-                disabled={points < TICKET_COST}
-                className="w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-black bg-neon-yellow hover:shadow-[0_0_20px_rgba(255,231,0,0.5)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:shadow-none hover:scale-102 transition-all"
+                disabled={dopamineCoins < TICKET_COST}
+                className="w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest text-black bg-gradient-to-r from-neon-yellow to-neon-green hover:shadow-[0_0_25px_rgba(57,255,20,0.5)] disabled:from-zinc-900 disabled:to-zinc-900 disabled:text-zinc-600 disabled:border-zinc-800 disabled:shadow-none hover:scale-102 transition-all border-2 border-transparent active:scale-[0.98]"
               >
-                Buy Ticket (80 XP)
+                Insert 80 DC
               </button>
             )}
-
             {ticketState !== "idle" && (
               <button
                 onClick={() => setTicketState("idle")}
                 disabled={ticketState !== "revealed"}
-                className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest text-white border border-zinc-800 hover:border-zinc-700 bg-zinc-950 hover:bg-zinc-900 transition-all disabled:opacity-40"
+                className="w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-white border-2 border-zinc-800 hover:border-zinc-700 bg-zinc-950 hover:bg-zinc-900 transition-all disabled:opacity-40"
               >
-                Scratch Again
+                Insert Next Coin
               </button>
             )}
           </div>
-
           {/* Interactive scratch card viewport */}
           {ticketState !== "idle" && (
             <motion.div

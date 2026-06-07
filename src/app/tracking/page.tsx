@@ -99,33 +99,28 @@ export default function TrackingPage() {
   };
 
   const handleBoostClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    boostCourier();
-    
+    const isCombo = combo > 4;
+    boostCourier(isCombo);
     // Add combo multiplier
     setCombo(prev => {
       const next = prev + 1;
-      
       // Decay combo count if no clicks after 1.2 seconds
       if (comboDecayRef.current) clearTimeout(comboDecayRef.current);
       comboDecayRef.current = setTimeout(() => {
         setCombo(0);
       }, 1200);
-
       return next;
     });
-
     // Create a floating combo text element
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left + (Math.random() * 40 - 20);
     const y = e.clientY - rect.top - 20;
-    
     const newText: FloatingText = {
       id: `${Date.now()}-${Math.random()}`,
       x,
       y,
-      text: combo > 4 ? `🔥 COMBO X${combo}! +${combo * 5} XP` : `🚀 BOOST! +10 XP`
+      text: isCombo ? `🔥 COMBO X${combo}! +15 XP | +3 DC` : `🚀 BOOST! +5 XP | +1 DC`
     };
-
     setFloatingTexts(prev => [...prev, newText]);
   };
 
@@ -229,7 +224,7 @@ export default function TrackingPage() {
               }}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-neon-green shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:shadow-[0_0_35px_rgba(57,255,20,0.7)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
             >
-              <span>Accept Delivery & Claim Reward (+{activeOrder.pointsEarned} XP)</span>
+              <span>Accept Delivery & Claim Reward (+{activeOrder.pointsEarned} XP {activeOrder.coinsEarned ? `& +${activeOrder.coinsEarned} DC` : ""})</span>
               <ChevronRight className="h-5 w-5" />
             </button>
           </motion.div>
@@ -259,6 +254,12 @@ export default function TrackingPage() {
           <span>Brain Points Earned</span>
           <span className="font-black text-neon-cyan">+{activeOrder.pointsEarned} XP</span>
         </div>
+        {activeOrder.coinsEarned !== undefined && (
+          <div className="flex justify-between">
+            <span>Dopamine Coins Earned</span>
+            <span className="font-black text-neon-yellow">+{activeOrder.coinsEarned} DC</span>
+          </div>
+        )}
       </div>
 
     </div>

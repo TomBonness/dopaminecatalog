@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node tests/progression.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.592.0",

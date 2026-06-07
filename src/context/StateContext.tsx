@@ -18,6 +18,7 @@ export interface Order {
   items: CartItem[];
   status: "preparing" | "delivering" | "completed";
   pointsEarned: number;
+  coinsEarned?: number;
   timestamp: number;
   deliveryProgress: number; // 0 to 100
   boostClicks: number;
@@ -54,6 +55,7 @@ export const BADGES: Badge[] = [
 
 interface StateContextProps {
   points: number;
+  dopamineCoins: number;
   ordersCompletedCount: number;
   moneySaved: number;
   impulsiveDecisionsAvoided: number;
@@ -65,15 +67,15 @@ interface StateContextProps {
   rankName: string;
   pointsToNextLevel: number;
   pointsPercent: number;
-  
   addToCart: (menuItem: MenuItem, options: MenuItemOption[], quantity: number) => void;
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, delta: number) => void;
   clearCart: () => void;
   placeOrder: (restaurant: Restaurant) => void;
-  boostCourier: () => void;
+  boostCourier: (isCombo?: boolean) => void;
   completeActiveOrder: () => void;
   addPoints: (amount: number) => void;
+  addCoins: (amount: number) => void;
   unlockBadge: (badgeId: string) => void;
   syncStatsWithServer: () => Promise<void>;
   resetStats: () => void;
@@ -87,13 +89,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Basic states
   const [userId, setUserId] = useState<string>("");
   const [points, setPoints] = useState<number>(0);
+  const [dopamineCoins, setDopamineCoins] = useState<number>(0);
   const [ordersCompletedCount, setOrdersCompletedCount] = useState<number>(0);
   const [moneySaved, setMoneySaved] = useState<number>(0);
   const [impulsiveDecisionsAvoided, setImpulsiveDecisionsAvoided] = useState<number>(0);
   const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
-
   // Initialize from LocalStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -103,12 +105,11 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         localStorage.setItem("dopamine_user_id", storedUserId);
       }
       setUserId(storedUserId);
-
       setPoints(Number(localStorage.getItem("dopamine_points") || "100")); // start with 100 welcome points!
+      setDopamineCoins(Number(localStorage.getItem("dopamine_coins") || "100")); // start with 100 welcome coins!
       setOrdersCompletedCount(Number(localStorage.getItem("dopamine_orders_count") || "0"));
       setMoneySaved(Number(localStorage.getItem("dopamine_money_saved") || "0"));
       setImpulsiveDecisionsAvoided(Number(localStorage.getItem("dopamine_decisions_avoided") || "0"));
-      
       const savedBadges = localStorage.getItem("dopamine_badges");
       if (savedBadges) {
         try {
@@ -142,12 +143,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (userId) {
       localStorage.setItem("dopamine_points", points.toString());
+      localStorage.setItem("dopamine_coins", dopamineCoins.toString());
       localStorage.setItem("dopamine_orders_count", ordersCompletedCount.toString());
       localStorage.setItem("dopamine_money_saved", moneySaved.toString());
       localStorage.setItem("dopamine_decisions_avoided", impulsiveDecisionsAvoided.toString());
       localStorage.setItem("dopamine_badges", JSON.stringify(unlockedBadges));
     }
-  }, [points, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, userId]);
+  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, userId]);
 
   useEffect(() => {
     if (userId) {
@@ -199,6 +201,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         body: JSON.stringify({
           userId,
           points,
+          dopamineCoins,
           ordersCompletedCount,
           moneySaved,
           impulsiveDecisionsAvoided,
@@ -208,7 +211,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (err) {
       console.warn("Server sync skipped or failed (DynamoDB offline):", err);
     }
-  }, [userId, points, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges]);
+  }, [userId, points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges]);
 
   // Sync to database periodically
   useEffect(() => {
@@ -218,7 +221,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }, 2000);
     return () => clearTimeout(timer);
-  }, [points, ordersCompletedCount, moneySaved, syncStatsWithServer, userId]);
+  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, syncStatsWithServer, userId]);
 
   // Level & Rank calculations
   // Level threshold: Level 1 = 0-499, Level 2 = 500-999, Level 3 = 1000-1499, etc.
@@ -270,6 +273,9 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addPoints = (amount: number) => {
     setPoints(prev => prev + amount);
+  };
+  const addCoins = (amount: number) => {
+    setDopamineCoins(prev => Math.max(0, prev + amount));
   };
 
   // Cart operations
@@ -340,9 +346,9 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Calculate dopamine points earned
     const itemsPoints = cart.reduce((acc, item) => acc + (item.menuItem.dopaminePoints * item.quantity), 0);
     const orderPoints = itemsPoints + 100; // 100 flat points for placing order
-
     // Create the simulated order
     const orderId = "order_" + Math.random().toString(36).substring(2, 9).toUpperCase();
+    const coinsEarned = Math.floor(orderPoints / 5);
     const newOrder: Order = {
       id: orderId,
       restaurantId: restaurant.id,
@@ -350,6 +356,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       items: [...cart],
       status: "preparing",
       pointsEarned: orderPoints,
+      coinsEarned: coinsEarned,
       timestamp: Date.now(),
       deliveryProgress: 0,
       boostClicks: 0
@@ -358,6 +365,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveOrder(newOrder);
     setCart([]); // Clear cart
     play("checkout");
+    addCoins(coinsEarned);
 
     // Track statistics
     setMoneySaved(prev => {
@@ -374,21 +382,21 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Turbo boost button spam
-  const boostCourier = () => {
+  const boostCourier = (isCombo: boolean = false) => {
     if (!activeOrder || activeOrder.status === "completed") return;
-    
     play("boost");
+    const xpReward = isCombo ? 15 : 5;
+    const dcReward = isCombo ? 3 : 1;
+    setPoints(prev => prev + xpReward);
+    setDopamineCoins(prev => prev + dcReward);
     setActiveOrder(prev => {
       if (!prev) return null;
-      
       const newClicks = prev.boostClicks + 1;
       // Faster progression with each boost click (+4% progress per click)
       const nextProgress = Math.min(prev.deliveryProgress + 4, 100);
-      
       if (newClicks >= 20) {
         setTimeout(() => unlockBadge("speed-demon"), 200);
       }
-
       return {
         ...prev,
         boostClicks: newClicks,
@@ -409,6 +417,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const resetStats = () => {
     setPoints(100);
+    setDopamineCoins(100);
     setOrdersCompletedCount(0);
     setMoneySaved(0);
     setImpulsiveDecisionsAvoided(0);
@@ -417,6 +426,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveOrder(null);
     if (typeof window !== "undefined") {
       localStorage.setItem("dopamine_points", "100");
+      localStorage.setItem("dopamine_coins", "100");
       localStorage.setItem("dopamine_orders_count", "0");
       localStorage.setItem("dopamine_money_saved", "0");
       localStorage.setItem("dopamine_decisions_avoided", "0");
@@ -430,6 +440,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <StateContext.Provider
       value={{
         points,
+        dopamineCoins,
         ordersCompletedCount,
         moneySaved,
         impulsiveDecisionsAvoided,
@@ -449,6 +460,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         boostCourier,
         completeActiveOrder,
         addPoints,
+        addCoins,
         unlockBadge,
         syncStatsWithServer,
         resetStats

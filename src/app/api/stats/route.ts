@@ -5,6 +5,7 @@ import { PutCommand } from "@aws-sdk/lib-dynamodb";
 interface SyncStatsRequest {
   userId: string;
   points: number;
+  dopamineCoins: number;
   ordersCompletedCount: number;
   moneySaved: number;
   impulsiveDecisionsAvoided: number;
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     const {
       userId,
       points,
+      dopamineCoins,
       ordersCompletedCount,
       moneySaved,
       impulsiveDecisionsAvoided,
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
             Item: {
               userId,
               points: Number(points || 0),
+              dopamineCoins: Number(dopamineCoins || 0),
               ordersCompletedCount: Number(ordersCompletedCount || 0),
               moneySaved: Number(moneySaved || 0),
               impulsiveDecisionsAvoided: Number(impulsiveDecisionsAvoided || 0),
