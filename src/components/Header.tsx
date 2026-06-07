@@ -29,11 +29,11 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between gap-4">
+        <div className="flex h-14 sm:h-20 items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo / Title */}
           <Link href="/" className="flex items-center space-x-2 shrink-0">
-            <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan select-none text-neon-glow-pink">
+            <span className="text-lg sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan select-none text-neon-glow-pink">
               DOPAMINE
             </span>
             <span className="hidden sm:inline-block text-xs font-bold px-2 py-0.5 rounded bg-zinc-900 border border-neon-cyan text-neon-cyan uppercase tracking-widest text-neon-glow-cyan animate-pulse">
@@ -58,31 +58,26 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
           </div>
 
           {/* Navigation & Controls */}
-          <nav className="flex items-center space-x-2 sm:space-x-4">
+          <nav className="flex items-center space-x-1.5 sm:space-x-4">
             {/* Dopamine Coins Indicator */}
-            <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-neon-yellow/30 text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.15)] select-none hover:shadow-[0_0_15px_rgba(255,231,0,0.3)] transition-all shrink-0">
-              <Coins className="h-4 w-4 text-neon-yellow" />
-              <span className="text-xs font-black text-neon-glow-yellow">{dopamineCoins} <span className="hidden xs:inline">DC</span></span>
+            <div className="flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-yellow/30 text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.15)] select-none hover:shadow-[0_0_15px_rgba(255,231,0,0.3)] transition-all shrink-0">
+              <Coins className="h-3.5 w-3.5 sm:h-4 w-4 text-neon-yellow" />
+              <span className="text-[10px] sm:text-xs font-black text-neon-glow-yellow">{dopamineCoins} <span className="hidden xs:inline">DC</span></span>
             </div>
             {/* Mobile Level Pill */}
-            <div className="md:hidden flex flex-col items-end shrink-0">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Points</span>
-              <div className="flex items-center space-x-1 font-bold text-neon-pink text-sm">
-                <span>Lvl {level}</span>
-                <span className="text-zinc-600">•</span>
-                <span className="text-neon-cyan">{points}</span>
-              </div>
+            <div className="md:hidden flex items-center px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-black text-neon-cyan shrink-0">
+              Lvl {level}
             </div>
 
             {/* Rewards Center Link */}
             <Link href="/rewards">
-              <div className={`relative flex items-center justify-center p-2.5 rounded-lg border transition-all duration-200 cursor-pointer ${
+              <div className={`relative flex items-center justify-center p-1.5 sm:p-2.5 rounded-lg border transition-all duration-200 cursor-pointer ${
                 pathname === "/rewards"
                   ? "bg-zinc-900 border-neon-yellow text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.2)]"
                   : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:text-neon-yellow hover:border-neon-yellow/50"
               }`}>
-                <Gift className="h-5 w-5" />
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-neon-yellow text-[9px] font-black text-black">
+                <Gift className="h-4 w-4 sm:h-5 w-5" />
+                <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full bg-neon-yellow text-[8px] sm:text-[9px] font-black text-black">
                   !
                 </span>
               </div>
@@ -91,13 +86,13 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
             {/* Courier Tracking Link (Visible if there's an active order) */}
             {activeOrder && (
               <Link href="/tracking">
-                <div className={`relative flex items-center justify-center p-2.5 rounded-lg border bg-zinc-900 border-neon-cyan text-neon-cyan cursor-pointer shadow-[0_0_10px_rgba(0,240,255,0.25)] hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all duration-200 ${
+                <div className={`relative flex items-center justify-center p-1.5 sm:p-2.5 rounded-lg border bg-zinc-900 border-neon-cyan text-neon-cyan cursor-pointer shadow-[0_0_10px_rgba(0,240,255,0.25)] hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all duration-200 ${
                   pathname === "/tracking" ? "animate-none" : "animate-pulse"
                 }`}>
-                  <Trophy className="h-5 w-5 animate-bounce" />
-                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <Trophy className="h-4 w-4 sm:h-5 w-5 animate-bounce" />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-cyan opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-cyan"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-neon-cyan"></span>
                   </span>
                 </div>
               </Link>
@@ -109,12 +104,12 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
             {/* Cart Button */}
             <button
               onClick={onCartOpen}
-              className="relative flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg bg-gradient-to-r from-neon-pink to-neon-purple text-white font-extrabold text-sm border-0 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:shadow-[0_0_20px_rgba(255,0,127,0.6)] hover:scale-105 active:scale-95 transition-all duration-150"
+              className="relative flex items-center space-x-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-lg bg-gradient-to-r from-neon-pink to-neon-purple text-white font-extrabold text-xs sm:text-sm border-0 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:shadow-[0_0_20px_rgba(255,0,127,0.6)] hover:scale-105 active:scale-95 transition-all duration-150"
             >
-              <ShoppingBag className="h-4 w-4" />
+              <ShoppingBag className="h-3.5 w-3.5 sm:h-4 w-4" />
               <span className="hidden sm:inline">View Cart</span>
               {totalCartItems > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black text-neon-pink shadow-md animate-bounce">
+                <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-white text-[8px] sm:text-[10px] font-black text-neon-pink shadow-md animate-bounce">
                   {totalCartItems}
                 </span>
               )}
@@ -124,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
         </div>
 
         {/* Mobile XP Bar sub-header */}
-        <div className="md:hidden pb-3">
+        <div className="md:hidden pb-2 sm:pb-3">
           <div className="relative h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden border border-zinc-800">
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan"
