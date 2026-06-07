@@ -6,7 +6,7 @@ import { useAudio } from "@/context/AudioContext";
 import { ScratchCard } from "@/components/ScratchCard";
 import { Award, Sparkles, Coins, ShoppingBag, Landmark } from "lucide-react";
 import { motion } from "framer-motion";
-
+import Link from "next/link";
 export default function RewardsPage() {
   const { play } = useAudio();
   const {
@@ -17,7 +17,11 @@ export default function RewardsPage() {
     addCoins,
     unlockBadge,
     moneySaved,
-    impulsiveDecisionsAvoided
+    impulsiveDecisionsAvoided,
+    dopamineRushActive,
+    incrementQuestProgress,
+    pointsToNextLevel,
+    level
   } = useAppState();
   const [ticketState, setTicketState] = useState<"idle" | "purchased" | "revealed">("idle");
   const [resetKey, setResetKey] = useState<number>(0);
@@ -37,24 +41,31 @@ export default function RewardsPage() {
     let text = "";
     let value: { type: "reward" | "badge"; xp: number; coins: number; val?: string };
 
+    // Rush multiplier
+    const multiplier = dopamineRushActive ? 2 : 1;
+
     if (roll < 0.6) {
       // Common reward: XP and DC
       const amountsXP = [50, 100, 150];
       const amountsCoins = [20, 30, 40];
       const xp = amountsXP[Math.floor(Math.random() * amountsXP.length)];
       const coins = amountsCoins[Math.floor(Math.random() * amountsCoins.length)];
-      text = `+${xp} XP & +${coins} DC`;
-      value = { type: "reward", xp, coins };
+      const finalXp = xp * multiplier;
+      const finalCoins = coins * multiplier;
+      text = `+${finalXp} XP & +${finalCoins} DC`;
+      value = { type: "reward", xp: finalXp, coins: finalCoins };
     } else if (roll < 0.85) {
       // Jackpot points: XP & Coins
-      const xp = 300;
-      const coins = 100;
+      const xp = 300 * multiplier;
+      const coins = 100 * multiplier;
       text = `🌟 JACKPOT! +${xp} XP & +${coins} DC`;
       value = { type: "reward", xp, coins };
     } else {
       // Badge reward + some XP & Coins
-      text = "🎰 Lucky Gambler Badge! +100 XP & +50 DC";
-      value = { type: "badge", xp: 100, coins: 50, val: "lucky-gambler" };
+      const xp = 100 * multiplier;
+      const coins = 50 * multiplier;
+      text = `🎰 Lucky Gambler Badge! +${xp} XP & +${coins} DC`;
+      value = { type: "badge", xp, coins, val: "lucky-gambler" };
     }
     setRewardText(text);
     setRewardValue(value);
@@ -74,6 +85,10 @@ export default function RewardsPage() {
     setTimeout(() => {
       unlockBadge("lucky-gambler");
     }, 800);
+
+    // Increment scratchcard quest progress
+    incrementQuestProgress("serotoninScratch", 1);
+
     setTicketState("revealed");
   };
 
@@ -153,6 +168,47 @@ export default function RewardsPage() {
               </button>
             )}
           </div>
+
+          {/* Guidance: Serotonin Levels Restored */}
+          {ticketState === "revealed" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full p-5 rounded-2xl bg-zinc-900 border border-neon-cyan text-center space-y-3 shadow-[0_0_15px_rgba(0,240,255,0.2)]"
+            >
+              <h4 className="font-black text-sm text-neon-cyan uppercase tracking-wider">Serotonin Levels Restored</h4>
+              <p className="text-[11px] text-zinc-400">
+                You need <span className="text-white font-extrabold">{pointsToNextLevel} XP</span> to reach Level {level + 1}.
+              </p>
+              <Link
+                href="/"
+                className="inline-flex w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider text-black bg-neon-cyan hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all items-center justify-center space-x-1.5 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>Go Order More Food</span>
+              </Link>
+            </motion.div>
+          )}
+
+          {/* Guidance: Out of Coins */}
+          {ticketState === "idle" && dopamineCoins < TICKET_COST && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full p-5 rounded-2xl bg-zinc-900 border border-neon-yellow text-center space-y-3 shadow-[0_0_15px_rgba(255,231,0,0.15)]"
+            >
+              <h4 className="font-black text-sm text-neon-yellow uppercase tracking-wider">Out of Dopamine Coins</h4>
+              <p className="text-[11px] text-zinc-400">
+                You only have <span className="text-white font-bold">{dopamineCoins} DC</span>. You need {TICKET_COST} DC to purchase a scratch-off.
+              </p>
+              <Link
+                href="/"
+                className="inline-flex w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider text-black bg-neon-yellow hover:shadow-[0_0_15px_rgba(255,231,0,0.4)] transition-all items-center justify-center space-x-1.5 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>Browse Kitchens & Order</span>
+              </Link>
+            </motion.div>
+          )}
           {/* Interactive scratch card viewport */}
           {ticketState !== "idle" && (
             <motion.div

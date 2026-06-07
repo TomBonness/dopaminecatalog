@@ -21,7 +21,9 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
     pointsPercent,
     pointsToNextLevel,
     cart,
-    activeOrder
+    activeOrder,
+    dopamineRushActive,
+    dopamineRushTimeLeft
   } = useAppState();
 
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -59,19 +61,31 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
 
           {/* Navigation & Controls */}
           <nav className="flex items-center space-x-1.5 sm:space-x-4">
+            {/* Dopamine Rush Countdown Badge */}
+            {dopamineRushActive && (
+              <div className="h-8 sm:h-10 flex items-center justify-center space-x-1 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-black border border-neon-pink text-neon-pink shadow-[0_0_10px_rgba(255,0,127,0.3)] animate-pulse select-none shrink-0 font-black text-[10px] sm:text-xs">
+                <span className="relative flex h-2 w-2 mr-1">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-pink opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-pink"></span>
+                </span>
+                <span>RUSH: {dopamineRushTimeLeft}s</span>
+              </div>
+            )}
+
             {/* Dopamine Coins Indicator */}
-            <div className="flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-yellow/30 text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.15)] select-none hover:shadow-[0_0_15px_rgba(255,231,0,0.3)] transition-all shrink-0">
+            <div className="h-8 sm:h-10 flex items-center justify-center space-x-1 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-yellow/30 text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.15)] select-none hover:shadow-[0_0_15px_rgba(255,231,0,0.3)] transition-all shrink-0">
               <Coins className="h-3.5 w-3.5 sm:h-4 w-4 text-neon-yellow" />
               <span className="text-[10px] sm:text-xs font-black text-neon-glow-yellow">{dopamineCoins} <span className="hidden xs:inline">DC</span></span>
             </div>
+
             {/* Mobile Level Pill */}
-            <div className="md:hidden flex items-center px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-black text-neon-cyan shrink-0">
+            <div className="md:hidden h-8 sm:h-10 flex items-center justify-center px-2 sm:px-3 rounded-lg sm:rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-neon-cyan shrink-0">
               Lvl {level}
             </div>
 
             {/* Rewards Center Link */}
             <Link href="/rewards">
-              <div className={`relative flex items-center justify-center p-1.5 sm:p-2.5 rounded-lg border transition-all duration-200 cursor-pointer ${
+              <div className={`relative h-8 sm:h-10 w-8 sm:w-10 flex items-center justify-center rounded-lg sm:rounded-xl border transition-all duration-200 cursor-pointer ${
                 pathname === "/rewards"
                   ? "bg-zinc-900 border-neon-yellow text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.2)]"
                   : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:text-neon-yellow hover:border-neon-yellow/50"
@@ -86,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
             {/* Courier Tracking Link (Visible if there's an active order) */}
             {activeOrder && (
               <Link href="/tracking">
-                <div className={`relative flex items-center justify-center p-1.5 sm:p-2.5 rounded-lg border bg-zinc-900 border-neon-cyan text-neon-cyan cursor-pointer shadow-[0_0_10px_rgba(0,240,255,0.25)] hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all duration-200 ${
+                <div className={`relative h-8 sm:h-10 w-8 sm:w-10 flex items-center justify-center rounded-lg sm:rounded-xl border bg-zinc-900 border-neon-cyan text-neon-cyan cursor-pointer shadow-[0_0_10px_rgba(0,240,255,0.25)] hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all duration-200 ${
                   pathname === "/tracking" ? "animate-none" : "animate-pulse"
                 }`}>
                   <Trophy className="h-4 w-4 sm:h-5 w-5 animate-bounce" />

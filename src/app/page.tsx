@@ -17,7 +17,12 @@ export default function HomePage() {
     moneySaved,
     impulsiveDecisionsAvoided,
     unlockedBadges,
-    resetStats
+    resetStats,
+    dopamineRushActive,
+    dopamineRushTimeLeft,
+    questProgress,
+    questClaimed,
+    claimQuestReward
   } = useAppState();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -66,6 +71,151 @@ export default function HomePage() {
           <span>Reset Addiction</span>
         </button>
       </div>
+
+      {/* Dopamine Rush Status Banner */}
+      {dopamineRushActive && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan p-4 text-black font-black flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_20px_rgba(255,0,127,0.4)]"
+        >
+          <div className="absolute inset-0 bg-white/10 opacity-30 animate-pulse pointer-events-none" />
+          <div className="flex items-center space-x-3 z-10">
+            <span className="text-2xl animate-bounce">⚡</span>
+            <div>
+              <h3 className="text-base font-black uppercase tracking-wider text-black">
+                Dopamine Rush Active!
+              </h3>
+              <p className="text-xs font-bold text-black/80">
+                2x Rewards on all courier boosts and scratchcard lottery tickets!
+              </p>
+            </div>
+          </div>
+          <div className="z-10 bg-black text-neon-pink border border-neon-pink/30 px-4 py-2 rounded-xl text-lg font-black tracking-widest min-w-[90px] text-center shadow-[0_0_10px_rgba(255,0,127,0.3)] shrink-0">
+            {dopamineRushTimeLeft}s
+          </div>
+        </motion.div>
+      )}
+
+      {/* Daily Quests Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Award className="h-5 w-5 text-neon-yellow" />
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-400">
+              Daily Dopamine Quests
+            </h3>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              id: "turboBoost" as const,
+              title: "Turbo Boost",
+              desc: "Speed up couriers 15 times.",
+              current: questProgress.turboBoost,
+              target: 15,
+              reward: "+150 XP & +50 DC",
+            },
+            {
+              id: "serotoninScratch" as const,
+              title: "Serotonin Scratch",
+              desc: "Play 1 scratch-off card.",
+              current: questProgress.serotoninScratch,
+              target: 1,
+              reward: "+100 XP & +30 DC",
+            },
+            {
+              id: "dopamineFeast" as const,
+              title: "Dopamine Feast",
+              desc: "Place 1 order.",
+              current: questProgress.dopamineFeast,
+              target: 1,
+              reward: "+200 XP & +60 DC",
+            },
+          ].map(quest => {
+            const isCompleted = quest.current >= quest.target;
+            const isClaimed = questClaimed[quest.id];
+            const percent = Math.min((quest.current / quest.target) * 100, 100);
+
+            return (
+              <div
+                key={quest.id}
+                className={`p-4 rounded-2xl border flex flex-col justify-between space-y-4 transition-all duration-300 bg-zinc-950/60 ${
+                  isClaimed
+                    ? "border-zinc-800 opacity-60"
+                    : isCompleted
+                    ? "border-neon-yellow shadow-[0_0_15px_rgba(255,231,0,0.15)]"
+                    : "border-zinc-800"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-black text-sm text-white uppercase tracking-wide">
+                      {quest.title}
+                    </h4>
+                    {isClaimed ? (
+                      <span className="text-[10px] font-black text-zinc-500 uppercase">Claimed</span>
+                    ) : isCompleted ? (
+                      <span className="text-[10px] font-black text-neon-yellow uppercase animate-pulse">Ready</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-zinc-500">
+                        {quest.current}/{quest.target}
+                       </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-400 font-medium">{quest.desc}</p>
+                  
+                  {/* Progress Bar */}
+                  <div className="w-full bg-zinc-900 rounded-full h-1.5 mt-3 overflow-hidden border border-zinc-800/50">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        isClaimed
+                          ? "bg-zinc-700"
+                          : isCompleted
+                          ? "bg-neon-yellow"
+                          : "bg-neon-cyan"
+                      }`}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-zinc-900/50">
+                  <div className="text-[10px] font-bold text-neon-pink uppercase">
+                    Reward: {quest.reward}
+                  </div>
+                  
+                  {isClaimed ? (
+                    <button
+                      disabled
+                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed uppercase"
+                    >
+                      Claimed
+                    </button>
+                  ) : isCompleted ? (
+                    <button
+                      onClick={() => claimQuestReward(quest.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-neon-yellow text-black shadow-[0_0_10px_rgba(255,231,0,0.25)] hover:shadow-[0_0_15px_rgba(255,231,0,0.5)] active:scale-95 transition uppercase"
+                    >
+                      Claim
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-zinc-900/40 text-zinc-500 border border-zinc-800/80 cursor-not-allowed uppercase"
+                    >
+                      Locked
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 2. Category Scroll (horizontal quick filters moved to the top) */}
       <div className="space-y-3">
         <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-400">Categories</h3>

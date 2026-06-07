@@ -22,7 +22,8 @@ export default function TrackingPage() {
   const {
     activeOrder,
     boostCourier,
-    completeActiveOrder
+    completeActiveOrder,
+    dopamineRushActive
   } = useAppState();
 
   const [combo, setCombo] = useState<number>(0);
@@ -115,11 +116,16 @@ export default function TrackingPage() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left + (Math.random() * 40 - 20);
     const y = e.clientY - rect.top - 20;
+
+    const multiplier = dopamineRushActive ? 2 : 1;
+    const xpVal = (isCombo ? 15 : 5) * multiplier;
+    const dcVal = (isCombo ? 3 : 1) * multiplier;
+
     const newText: FloatingText = {
       id: `${Date.now()}-${Math.random()}`,
       x,
       y,
-      text: isCombo ? `🔥 COMBO X${combo}! +15 XP | +3 DC` : `🚀 BOOST! +5 XP | +1 DC`
+      text: isCombo ? `🔥 COMBO X${combo}! +${xpVal} XP | +${dcVal} DC` : `🚀 BOOST! +${xpVal} XP | +${dcVal} DC`
     };
     setFloatingTexts(prev => [...prev, newText]);
   };
@@ -143,6 +149,12 @@ export default function TrackingPage() {
         </p>
       </div>
 
+      {/* Dopamine Rush Status Banner */}
+      {dopamineRushActive && (
+        <div className="p-3 rounded-xl bg-gradient-to-r from-neon-pink to-neon-purple text-black font-black text-center text-xs uppercase tracking-widest animate-pulse shadow-[0_0_15px_rgba(255,0,127,0.3)]">
+          ⚡ Dopamine Rush Active! 2x Boosting Rewards! ⚡
+        </div>
+      )}
       {/* SVG Tracking Map */}
       <TrackingMap progress={progress} />
 

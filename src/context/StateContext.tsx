@@ -53,6 +53,18 @@ export const BADGES: Badge[] = [
   { id: "fire-breather", name: "Fire Breather", description: "Ordered extra-spicy Electric Wasabi or Volcano sauces.", icon: "🔥" }
 ];
 
+export interface QuestProgress {
+  turboBoost: number;
+  serotoninScratch: number;
+  dopamineFeast: number;
+}
+
+export interface QuestClaimed {
+  turboBoost: boolean;
+  serotoninScratch: boolean;
+  dopamineFeast: boolean;
+}
+
 interface StateContextProps {
   points: number;
   dopamineCoins: number;
@@ -67,6 +79,13 @@ interface StateContextProps {
   rankName: string;
   pointsToNextLevel: number;
   pointsPercent: number;
+  dopamineRushActive: boolean;
+  dopamineRushTimeLeft: number;
+  triggerDopamineRush: () => void;
+  questProgress: QuestProgress;
+  questClaimed: QuestClaimed;
+  incrementQuestProgress: (questId: keyof QuestProgress, amount?: number) => void;
+  claimQuestReward: (questId: keyof QuestProgress) => void;
   addToCart: (menuItem: MenuItem, options: MenuItemOption[], quantity: number) => void;
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, delta: number) => void;
@@ -96,6 +115,21 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+
+  // Dopamine Rush & Quest states
+  const [dopamineRushExpiresAt, setDopamineRushExpiresAt] = useState<number | null>(null);
+  const [dopamineRushTimeLeft, setDopamineRushTimeLeft] = useState<number>(0);
+  const [questProgress, setQuestProgress] = useState<QuestProgress>({
+    turboBoost: 0,
+    serotoninScratch: 0,
+    dopamineFeast: 0,
+  });
+  const [questClaimed, setQuestClaimed] = useState<QuestClaimed>({
+    turboBoost: false,
+    serotoninScratch: false,
+    dopamineFeast: false,
+  });
+
   // Initialize from LocalStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -136,9 +170,38 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setActiveOrder(null);
         }
       }
+
+      const storedRushExpires = localStorage.getItem("dopamine_rush_expires_at");
+      if (storedRushExpires) {
+        const expiresAt = Number(storedRushExpires);
+        if (expiresAt > Date.now()) {
+          setDopamineRushExpiresAt(expiresAt);
+          setDopamineRushTimeLeft(Math.ceil((expiresAt - Date.now()) / 1000));
+        } else {
+          localStorage.removeItem("dopamine_rush_expires_at");
+        }
+      }
+
+      const savedQuestProgress = localStorage.getItem("dopamine_quest_progress");
+      if (savedQuestProgress) {
+        try {
+          setQuestProgress(JSON.parse(savedQuestProgress) as QuestProgress);
+        } catch {
+          // fallback
+        }
+      }
+      const savedQuestClaimed = localStorage.getItem("dopamine_quest_claimed");
+      if (savedQuestClaimed) {
+        try {
+          setQuestClaimed(JSON.parse(savedQuestClaimed) as QuestClaimed);
+        } catch {
+          // fallback
+        }
+      }
     }
   }, []);
 
+  // Save changes to LocalStorage
   // Save changes to LocalStorage
   useEffect(() => {
     if (userId) {
@@ -148,8 +211,37 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("dopamine_money_saved", moneySaved.toString());
       localStorage.setItem("dopamine_decisions_avoided", impulsiveDecisionsAvoided.toString());
       localStorage.setItem("dopamine_badges", JSON.stringify(unlockedBadges));
+      localStorage.setItem("dopamine_quest_progress", JSON.stringify(questProgress));
+      localStorage.setItem("dopamine_quest_claimed", JSON.stringify(questClaimed));
     }
-  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, userId]);
+  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, questProgress, questClaimed, userId]);
+
+  // Dopamine Rush countdown timer effect
+  useEffect(() => {
+    if (!dopamineRushExpiresAt) {
+      setDopamineRushTimeLeft(0);
+      return;
+    }
+
+    const updateTimer = () => {
+      const timeLeft = Math.ceil((dopamineRushExpiresAt - Date.now()) / 1000);
+      if (timeLeft <= 0) {
+        setDopamineRushTimeLeft(0);
+        setDopamineRushExpiresAt(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("dopamine_rush_expires_at");
+        }
+      } else {
+        setDopamineRushTimeLeft(timeLeft);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 500);
+    return () => clearInterval(interval);
+  }, [dopamineRushExpiresAt]);
+
+  const dopamineRushActive = dopamineRushTimeLeft > 0;
 
   useEffect(() => {
     if (userId) {
@@ -332,6 +424,65 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCart([]);
   };
 
+  const triggerDopamineRush = useCallback(() => {
+    const expiresAt = Date.now() + 60 * 1000;
+    setDopamineRushExpiresAt(expiresAt);
+    setDopamineRushTimeLeft(60);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dopamine_rush_expires_at", expiresAt.toString());
+    }
+  }, []);
+
+  const incrementQuestProgress = useCallback((questId: keyof QuestProgress, amount: number = 1) => {
+    setQuestProgress(prev => {
+      const limits: Record<keyof QuestProgress, number> = {
+        turboBoost: 15,
+        serotoninScratch: 1,
+        dopamineFeast: 1,
+      };
+      const maxVal = limits[questId];
+      if (prev[questId] >= maxVal) return prev;
+      return {
+        ...prev,
+        [questId]: Math.min(prev[questId] + amount, maxVal)
+      };
+    });
+  }, []);
+
+  const claimQuestReward = useCallback((questId: keyof QuestProgress) => {
+    const limits: Record<keyof QuestProgress, number> = {
+      turboBoost: 15,
+      serotoninScratch: 1,
+      dopamineFeast: 1,
+    };
+    const rewards: Record<keyof QuestProgress, { xp: number; coins: number }> = {
+      turboBoost: { xp: 150, coins: 50 },
+      serotoninScratch: { xp: 100, coins: 30 },
+      dopamineFeast: { xp: 200, coins: 60 },
+    };
+
+    setQuestProgress(currProgress => {
+      const isCompleted = currProgress[questId] >= limits[questId];
+      if (!isCompleted) return currProgress;
+
+      setQuestClaimed(currClaimed => {
+        if (currClaimed[questId]) return currClaimed;
+
+        const { xp, coins } = rewards[questId];
+        setPoints(prev => prev + xp);
+        setDopamineCoins(prev => Math.max(0, prev + coins));
+        play("rankup");
+
+        return {
+          ...currClaimed,
+          [questId]: true
+        };
+      });
+
+      return currProgress;
+    });
+  }, [play]);
+
   // Order placement
   const placeOrder = (restaurant: Restaurant) => {
     if (cart.length === 0) return;
@@ -379,16 +530,27 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setImpulsiveDecisionsAvoided(prev => prev + 1);
     addPoints(orderPoints);
     unlockBadge("first-hit");
+
+    // Quest & Rush updates
+    incrementQuestProgress("dopamineFeast", 1);
+    triggerDopamineRush();
   };
 
   // Turbo boost button spam
   const boostCourier = (isCombo: boolean = false) => {
     if (!activeOrder || activeOrder.status === "completed") return;
     play("boost");
-    const xpReward = isCombo ? 15 : 5;
-    const dcReward = isCombo ? 3 : 1;
+
+    const multiplier = dopamineRushActive ? 2 : 1;
+    const xpReward = (isCombo ? 15 : 5) * multiplier;
+    const dcReward = (isCombo ? 3 : 1) * multiplier;
+
     setPoints(prev => prev + xpReward);
     setDopamineCoins(prev => prev + dcReward);
+
+    // Quest updates
+    incrementQuestProgress("turboBoost", 1);
+
     setActiveOrder(prev => {
       if (!prev) return null;
       const newClicks = prev.boostClicks + 1;
@@ -409,10 +571,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Complete delivery
   const completeActiveOrder = () => {
     if (!activeOrder) return;
-    
+
     play("delivery");
     setOrdersCompletedCount(prev => prev + 1);
     setActiveOrder(null);
+
+    // Trigger dopamine rush
+    triggerDopamineRush();
   };
 
   const resetStats = () => {
@@ -424,6 +589,18 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUnlockedBadges([]);
     setCart([]);
     setActiveOrder(null);
+    setDopamineRushExpiresAt(null);
+    setDopamineRushTimeLeft(0);
+    setQuestProgress({
+      turboBoost: 0,
+      serotoninScratch: 0,
+      dopamineFeast: 0
+    });
+    setQuestClaimed({
+      turboBoost: false,
+      serotoninScratch: false,
+      dopamineFeast: false
+    });
     if (typeof window !== "undefined") {
       localStorage.setItem("dopamine_points", "100");
       localStorage.setItem("dopamine_coins", "100");
@@ -433,6 +610,17 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("dopamine_badges", JSON.stringify([]));
       localStorage.setItem("dopamine_cart", JSON.stringify([]));
       localStorage.removeItem("dopamine_active_order");
+      localStorage.removeItem("dopamine_rush_expires_at");
+      localStorage.setItem("dopamine_quest_progress", JSON.stringify({
+        turboBoost: 0,
+        serotoninScratch: 0,
+        dopamineFeast: 0
+      }));
+      localStorage.setItem("dopamine_quest_claimed", JSON.stringify({
+        turboBoost: false,
+        serotoninScratch: false,
+        dopamineFeast: false
+      }));
     }
   };
 
@@ -452,6 +640,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         rankName,
         pointsToNextLevel,
         pointsPercent,
+        dopamineRushActive,
+        dopamineRushTimeLeft,
+        triggerDopamineRush,
+        questProgress,
+        questClaimed,
+        incrementQuestProgress,
+        claimQuestReward,
         addToCart,
         removeFromCart,
         updateQuantity,

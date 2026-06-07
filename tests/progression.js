@@ -65,5 +65,96 @@ const comboBoost = simulateBoost(true);
 assert.strictEqual(comboBoost.xpReward, 15);
 assert.strictEqual(comboBoost.dcReward, 3);
 console.log('✓ Courier Boost rewards are correct.');
+// 4. Dopamine Rush rewards multiplier
+function simulateBoostWithRush(isCombo, isRushActive) {
+  const multiplier = isRushActive ? 2 : 1;
+  const xpReward = (isCombo ? 15 : 5) * multiplier;
+  const dcReward = (isCombo ? 3 : 1) * multiplier;
+  return { xpReward, dcReward };
+}
+
+console.log('- Testing Dopamine Rush rewards multiplier...');
+// Normal boost, no rush
+const normalNoRush = simulateBoostWithRush(false, false);
+assert.strictEqual(normalNoRush.xpReward, 5);
+assert.strictEqual(normalNoRush.dcReward, 1);
+
+// Normal boost, with rush
+const normalRush = simulateBoostWithRush(false, true);
+assert.strictEqual(normalRush.xpReward, 10);
+assert.strictEqual(normalRush.dcReward, 2);
+
+// Combo boost, with rush
+const comboRush = simulateBoostWithRush(true, true);
+assert.strictEqual(comboRush.xpReward, 30);
+assert.strictEqual(comboRush.dcReward, 6);
+console.log('✓ Dopamine Rush rewards multiplier is correct.');
+
+// 5. Daily Quests Progress and Claim Rewards
+function testQuests() {
+  console.log('- Testing Quest progression and claiming rewards...');
+  let points = 100;
+  let coins = 100;
+
+  // Quest configurations
+  const limits = {
+    turboBoost: 15,
+    serotoninScratch: 1,
+    dopamineFeast: 1
+  };
+
+  const rewards = {
+    turboBoost: { xp: 150, coins: 50 },
+    serotoninScratch: { xp: 100, coins: 30 },
+    dopamineFeast: { xp: 200, coins: 60 }
+  };
+
+  // State mock
+  let questProgress = { turboBoost: 0, serotoninScratch: 0, dopamineFeast: 0 };
+  let questClaimed = { turboBoost: false, serotoninScratch: false, dopamineFeast: false };
+
+  function incrementQuestProgress(questId, amount = 1) {
+    if (questProgress[questId] >= limits[questId]) return;
+    questProgress[questId] = Math.min(questProgress[questId] + amount, limits[questId]);
+  }
+
+  function claimQuestReward(questId) {
+    if (questProgress[questId] < limits[questId]) return;
+    if (questClaimed[questId]) return;
+    points += rewards[questId].xp;
+    coins += rewards[questId].coins;
+    questClaimed[questId] = true;
+  }
+
+  // 1. Place order (Dopamine Feast)
+  incrementQuestProgress('dopamineFeast');
+  assert.strictEqual(questProgress.dopamineFeast, 1);
+  claimQuestReward('dopamineFeast');
+  assert.strictEqual(questClaimed.dopamineFeast, true);
+  assert.strictEqual(points, 300); // 100 + 200
+  assert.strictEqual(coins, 160);  // 100 + 60
+
+  // 2. Play 1 scratch-off card (Serotonin Scratch)
+  incrementQuestProgress('serotoninScratch');
+  assert.strictEqual(questProgress.serotoninScratch, 1);
+  claimQuestReward('serotoninScratch');
+  assert.strictEqual(questClaimed.serotoninScratch, true);
+  assert.strictEqual(points, 400); // 300 + 100
+  assert.strictEqual(coins, 190);  // 160 + 30
+
+  // 3. Boost couriers 15 times (Turbo Boost)
+  for (let i = 0; i < 15; i++) {
+    incrementQuestProgress('turboBoost');
+  }
+  assert.strictEqual(questProgress.turboBoost, 15);
+  claimQuestReward('turboBoost');
+  assert.strictEqual(questClaimed.turboBoost, true);
+  assert.strictEqual(points, 550); // 400 + 150
+  assert.strictEqual(coins, 240);  // 190 + 50
+
+  console.log('✓ Quest progression and claiming rewards are correct.');
+}
+
+testQuests();
 
 console.log('All tests passed successfully!');
