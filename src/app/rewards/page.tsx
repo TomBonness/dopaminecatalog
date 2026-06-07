@@ -194,7 +194,7 @@ export default function RewardsPage() {
                     </div>
                     
                     <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                      isUnlocked ? "bg-neon-pink/10 text-neon-pink border border-neon-pink/30 text-neon-glow-pink" : "bg-zinc-900 text-zinc-650"
+                      isUnlocked ? "bg-neon-pink/10 text-neon-pink border border-neon-pink/30 text-neon-glow-pink" : "bg-zinc-900 text-zinc-500"
                     }`}>
                       {isUnlocked ? "Unlocked" : "Locked"}
                     </span>

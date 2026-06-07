@@ -232,7 +232,7 @@ export default function HomePage() {
                         <Clock className="h-3.5 w-3.5 text-zinc-500" />
                         <span>{restaurant.deliveryTime}</span>
                       </div>
-                      <span className="text-zinc-650">•</span>
+                      <span className="text-zinc-500">•</span>
                       <span>
                         {restaurant.deliveryFee === 0 ? "FREE Delivery" : `$${restaurant.deliveryFee.toFixed(2)} Delivery`}
                       </span>
