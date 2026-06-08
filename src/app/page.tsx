@@ -4,25 +4,18 @@ import React, { useState } from "react";
 import { MOCK_RESTAURANTS, CATEGORIES, Restaurant } from "@/lib/mockData";
 import { useAppState } from "@/context/StateContext";
 import { useAudio } from "@/context/AudioContext";
-import { Star, Clock, Sparkles, MapPin, Award, Trash2, ArrowRight, Lock } from "lucide-react";
+import { Star, Clock, Sparkles, MapPin, Trash2, ArrowRight, Lock } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { formatCash } from "@/lib/currency";
-
+import { DailyQuests } from "@/components/DailyQuests";
 export default function HomePage() {
   const { play } = useAudio();
   const {
-    points,
     level,
-    unlockedBadges,
     resetStats,
     dopamineRushActive,
-    dopamineRushTimeLeft,
-    questProgress,
-    questClaimed,
-    questConfig,
-    claimQuestReward
+    dopamineRushTimeLeft
   } = useAppState();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -96,116 +89,6 @@ export default function HomePage() {
           </div>
         </motion.div>
       )}
-
-      {/* Daily Quests Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Award className="h-5 w-5 text-neon-yellow" />
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-400">
-              Daily Dopamine Quests
-            </h3>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {([
-            "turboBoost",
-            "serotoninScratch",
-            "dopamineFeast",
-            "crisisManager"
-          ] as const).map(id => {
-            const config = questConfig[id];
-            return {
-              id,
-              title: config.title,
-              desc: config.desc,
-              current: questProgress[id] || 0,
-              target: config.target,
-              reward: `+${config.xp} XP & +${formatCash(config.coins)}`
-            };
-          }).map(quest => {
-            const isCompleted = quest.current >= quest.target;
-            const isClaimed = questClaimed[quest.id];
-            const percent = Math.min((quest.current / quest.target) * 100, 100);
-
-            return (
-              <div
-                key={quest.id}
-                className={`p-4 rounded-2xl border flex flex-col justify-between space-y-4 transition-all duration-300 bg-zinc-950/60 ${
-                  isClaimed
-                    ? "border-zinc-800 opacity-60"
-                    : isCompleted
-                    ? "border-neon-yellow shadow-[0_0_15px_rgba(255,231,0,0.15)]"
-                    : "border-zinc-800"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-black text-sm text-white uppercase tracking-wide">
-                      {quest.title}
-                    </h4>
-                    {isClaimed ? (
-                      <span className="text-[10px] font-black text-zinc-500 uppercase">Claimed</span>
-                    ) : isCompleted ? (
-                      <span className="text-[10px] font-black text-neon-yellow uppercase animate-pulse">Ready</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-zinc-500">
-                        {quest.current}/{quest.target}
-                       </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-zinc-400 font-medium">{quest.desc}</p>
-                  
-                  {/* Progress Bar */}
-                  <div className="w-full bg-zinc-900 rounded-full h-1.5 mt-3 overflow-hidden border border-zinc-800/50">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        isClaimed
-                          ? "bg-zinc-700"
-                          : isCompleted
-                          ? "bg-neon-yellow"
-                          : "bg-neon-cyan"
-                      }`}
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-900/50">
-                  <div className="text-[10px] font-bold text-neon-pink uppercase">
-                    Reward: {quest.reward}
-                  </div>
-                  
-                  {isClaimed ? (
-                    <button
-                      disabled
-                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed uppercase"
-                    >
-                      Claimed
-                    </button>
-                  ) : isCompleted ? (
-                    <button
-                      onClick={() => claimQuestReward(quest.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-neon-yellow text-black shadow-[0_0_10px_rgba(255,231,0,0.25)] hover:shadow-[0_0_15px_rgba(255,231,0,0.5)] active:scale-95 transition uppercase"
-                    >
-                      Claim
-                    </button>
-                  ) : (
-                    <button
-                      disabled
-                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-zinc-900/40 text-zinc-500 border border-zinc-800/80 cursor-not-allowed uppercase"
-                    >
-                      Locked
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
 
       {/* 2. Category Scroll (horizontal quick filters moved to the top) */}
       <div className="space-y-3">
@@ -362,6 +245,7 @@ export default function HomePage() {
           </button>
         </Link>
       </motion.div>
+      <DailyQuests />
     </div>
   );
 }

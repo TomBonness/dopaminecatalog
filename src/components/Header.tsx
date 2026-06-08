@@ -29,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
   } = useAppState();
 
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const activeOrderComplete = activeOrder?.status === "completed" || (activeOrder?.deliveryProgress ?? 0) >= 100;
+  const activeOrderHref = activeOrderComplete ? "/mukbang" : "/tracking";
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
@@ -109,9 +111,9 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
 
             {/* Courier Tracking Link (Visible if there's an active order) */}
             {activeOrder && (
-              <Link href="/tracking">
+              <Link href={activeOrderHref}>
                 <div className={`relative h-8 sm:h-10 w-8 sm:w-10 flex items-center justify-center rounded-lg sm:rounded-xl border bg-zinc-900 border-neon-cyan text-neon-cyan cursor-pointer shadow-[0_0_10px_rgba(0,240,255,0.25)] hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all duration-200 ${
-                  pathname === "/tracking" ? "animate-none" : "animate-pulse"
+                  pathname === activeOrderHref ? "animate-none" : "animate-pulse"
                 }`}>
                   <Trophy className="h-4 w-4 sm:h-5 w-5 animate-bounce" />
                   <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
