@@ -22,6 +22,7 @@ export default function HomePage() {
     dopamineRushTimeLeft,
     questProgress,
     questClaimed,
+    questConfig,
     claimQuestReward
   } = useAppState();
 
@@ -109,40 +110,22 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              id: "turboBoost" as const,
-              title: "Turbo Boost",
-              desc: "Speed up couriers 15 times.",
-              current: questProgress.turboBoost,
-              target: 15,
-              reward: "+150 XP & +50 DC",
-            },
-            {
-              id: "serotoninScratch" as const,
-              title: "Serotonin Scratch",
-              desc: "Play 1 scratch-off card.",
-              current: questProgress.serotoninScratch,
-              target: 1,
-              reward: "+100 XP & +30 DC",
-            },
-            {
-              id: "dopamineFeast" as const,
-              title: "Dopamine Feast",
-              desc: "Place 1 order.",
-              current: questProgress.dopamineFeast,
-              target: 1,
-              reward: "+200 XP & +60 DC",
-            },
-            {
-              id: "crisisManager" as const,
-              title: "Crisis Manager",
-              desc: "Resolve 3 delivery incidents.",
-              current: questProgress.crisisManager || 0,
-              target: 3,
-              reward: "+250 XP & +80 DC",
-            },
-          ].map(quest => {
+          {([
+            "turboBoost",
+            "serotoninScratch",
+            "dopamineFeast",
+            "crisisManager"
+          ] as const).map(id => {
+            const config = questConfig[id];
+            return {
+              id,
+              title: config.title,
+              desc: config.desc,
+              current: questProgress[id] || 0,
+              target: config.target,
+              reward: `+${config.xp} XP & +${config.coins} DC`
+            };
+          }).map(quest => {
             const isCompleted = quest.current >= quest.target;
             const isClaimed = questClaimed[quest.id];
             const percent = Math.min((quest.current / quest.target) * 100, 100);
@@ -224,23 +207,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Courier Crisis Training Teaser */}
-      {level < 3 && (
-        <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-neon-pink" />
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">🚨</span>
-            <span className="text-xs font-black uppercase tracking-widest text-zinc-400 block">Courier Crisis Alert</span>
-          </div>
-          <p className="text-xs text-zinc-300 font-semibold leading-relaxed">
-            {level < 2 ? (
-              <span>Reach Level 2 to unlock <span className="text-neon-pink">GPS Glitch Minigames</span>! You will assist couriers in navigating chaotic neon alleyway grids in real-time.</span>
-            ) : (
-              <span>New Minigame Unlocked! Help your driver navigate neon forks or tap out pothole coordinates to maintain your <span className="text-neon-yellow">Crisis Streak</span>!</span>
-            )}
-          </p>
-        </div>
-      )}
 
       {/* 2. Category Scroll (horizontal quick filters moved to the top) */}
       <div className="space-y-3">

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useAppState } from "@/context/StateContext";
 import { useAudio } from "@/context/AudioContext";
 import { TrackingMap } from "@/components/TrackingMap";
-import { Bike, ShieldAlert, Rocket, ChevronRight } from "lucide-react";
+import { Bot, ShieldAlert, Rocket, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,8 +71,9 @@ export default function TrackingPage() {
 
   // Shuffle pothole sequence on change
   useEffect(() => {
-    if (activeOrder?.activeIncident?.type === "pothole") {
-      const seq = activeOrder.activeIncident.sequence || [];
+    const type = activeOrder?.activeIncident?.type;
+    if (type === "pothole" || type === "signalJam") {
+      const seq = activeOrder?.activeIncident?.sequence || [];
       const shuffled = [...seq].sort(() => Math.random() - 0.5);
       setShuffledPotholeSymbols(shuffled);
       setPotholeProgress(0);
@@ -114,6 +115,7 @@ export default function TrackingPage() {
 
   const handlePotholeTap = (symbol: string) => {
     if (!activeOrder?.activeIncident) return;
+    const type = activeOrder.activeIncident.type;
     const seq = activeOrder.activeIncident.sequence || [];
     const nextTarget = seq[potholeProgress];
     if (symbol === nextTarget) {
@@ -122,22 +124,43 @@ export default function TrackingPage() {
       play("boost");
       if (nextProgress >= seq.length) {
         resolveIncident(true);
-        addFloatingText("✓ Shields Calibrated! +Progress", true);
+        if (type === "pothole") {
+          addFloatingText("✓ Shields Calibrated! +Progress", true);
+        } else {
+          addFloatingText("✓ Decryption Signal Sent! +Progress", true);
+        }
       }
     } else {
       resolveIncident(false);
-      addFloatingText("⚡ Shield Calibration Failed!", false);
+      if (type === "pothole") {
+        addFloatingText("⚡ Shield Calibration Failed!", false);
+      } else {
+        addFloatingText("⚡ Decryption Attempt Failed!", false);
+      }
     }
   };
 
   const handleOptionSelect = (index: number) => {
     if (!activeOrder?.activeIncident) return;
+    const type = activeOrder.activeIncident.type;
     const isCorrect = index === activeOrder.activeIncident.correctOptionIndex;
     resolveIncident(isCorrect);
     if (isCorrect) {
-      addFloatingText("✓ Route Corrected! +XP", true);
+      if (type === "gps") addFloatingText("✓ Route Corrected! +XP", true);
+      else if (type === "gatecode") addFloatingText("✓ Gate Passcode Matched! +XP", true);
+      else if (type === "kitchenSort") addFloatingText("✓ Ingredient Restored! +XP", true);
+      else if (type === "heatSync") addFloatingText("✓ Thermal Levels Normal! +XP", true);
+      else if (type === "cargoBalance") addFloatingText("✓ Balance Stabilized! +XP", true);
+      else if (type === "lockerSync") addFloatingText("✓ Locker Synced! +XP", true);
+      else addFloatingText("✓ Incident Resolved! +XP", true);
     } else {
-      addFloatingText("❌ Wrong Option! -Progress", false);
+      if (type === "gps") addFloatingText("❌ Wrong Route! -Progress", false);
+      else if (type === "gatecode") addFloatingText("❌ Wrong Passcode! -Progress", false);
+      else if (type === "kitchenSort") addFloatingText("❌ Wrong Item Chosen! -Progress", false);
+      else if (type === "heatSync") addFloatingText("❌ Cooling Failure! -Progress", false);
+      else if (type === "cargoBalance") addFloatingText("❌ Cargo Tipped! -Progress", false);
+      else if (type === "lockerSync") addFloatingText("❌ Lock Sync Error! -Progress", false);
+      else addFloatingText("❌ Resolution Failed! -Progress", false);
     }
   };
 
@@ -168,15 +191,25 @@ export default function TrackingPage() {
   // Status Ticker Messages
   const getTickerMessage = (prog: number) => {
     if (activeOrder?.activeIncident) {
-      return `⚠️ CRISIS: ${activeOrder.activeIncident.type === "gps" ? "GPS Glitch!" : activeOrder.activeIncident.type === "pothole" ? "Pothole Panic!" : "Gate Code Scramble!"}`;
+      const type = activeOrder.activeIncident.type;
+      let label = "Courier Robot Glitch!";
+      if (type === "gps") label = "GPS Glitch!";
+      else if (type === "pothole") label = "Pothole Panic!";
+      else if (type === "gatecode") label = "Gate Code Scramble!";
+      else if (type === "kitchenSort") label = "Kitchen Assembly Stalled!";
+      else if (type === "heatSync") label = "Thermal Overload Warning!";
+      else if (type === "signalJam") label = "Signal Jam Interference!";
+      else if (type === "cargoBalance") label = "Gyro-Stabilization Loss!";
+      else if (type === "lockerSync") label = "Locker Code Scramble!";
+      return `⚠️ CRISIS: ${label}`;
     }
     if (prog <= 15) return "Kitchen is aggressively chopping cyber-lettuce...";
     if (prog <= 30) return "Chef is performing a ceremonial seasoning of the patty...";
-    if (prog <= 45) return "Assembling your simulated order with absolute care...";
-    if (prog <= 60) return "Courier dispatched! Speeding through red lights using quantum tunnels...";
-    if (prog <= 75) return "Courier is avoiding a giant neighborhood cat wearing sunglasses...";
-    if (prog <= 90) return "Courier is double-checking for napkins and sauces...";
-    if (prog <= 99) return "Courier is hovering in your front yard via jetpack...";
+    if (prog <= 45) return "Robot assembling your simulated order with absolute care...";
+    if (prog <= 60) return "Courier robot dispatched! Rolling through crosswalks using quantum thrusters...";
+    if (prog <= 75) return "Courier robot is dodging a giant neighborhood cat wearing sunglasses...";
+    if (prog <= 90) return "Courier robot is scanning inventory for napkins and sauces...";
+    if (prog <= 99) return "Courier robot is hovering in your driveway via micro-thrusters...";
     return "Arrived! Open the airlock and receive the dopamine rush!";
   };
 
@@ -186,7 +219,7 @@ export default function TrackingPage() {
     // Add combo multiplier
     setCombo(prev => {
       const next = prev + 1;
-      const comboDecayDuration = ownedUpgrades.includes("turbo-battery") ? 2500 : 1200;
+      const comboDecayDuration = (ownedUpgrades.includes("turbo-battery") || ownedUpgrades.includes("signal-booster")) ? 2500 : 1200;
       if (comboDecayRef.current) clearTimeout(comboDecayRef.current);
       comboDecayRef.current = setTimeout(() => {
         setCombo(0);
@@ -223,7 +256,7 @@ export default function TrackingPage() {
       <div className="text-center space-y-2">
         <div className="flex justify-center gap-2">
           <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-black uppercase tracking-wider">
-            <Bike className="h-3.5 w-3.5 animate-bounce" />
+            <Bot className="h-3.5 w-3.5 animate-bounce" />
             <span>Real-time Tracking</span>
           </div>
           {activeOrder.incidentStreak > 0 && (
@@ -232,9 +265,9 @@ export default function TrackingPage() {
             </div>
           )}
         </div>
-        <h1 className="text-3xl font-black text-white">Courier Live Hub</h1>
+        <h1 className="text-3xl font-black text-white">Courier Robot Hub</h1>
         <p className="text-xs text-zinc-500">
-          Spam Turbo Boost to speed up delivery and earn points combos.
+          Spam Turbo Boost to speed up the courier robot and earn points combos.
         </p>
       </div>
       {/* Dopamine Rush Status Banner */}
@@ -249,7 +282,7 @@ export default function TrackingPage() {
       {/* Status Ticker Card */}
       <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1.5 h-full bg-neon-cyan" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Courier Status</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Robot Status</span>
         <div className="text-sm font-bold text-white text-neon-glow-cyan h-6 flex items-center">
           <AnimatePresence mode="wait">
             <motion.span
@@ -280,7 +313,7 @@ export default function TrackingPage() {
               <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
                 <span className="text-xs font-black uppercase tracking-widest text-neon-pink animate-pulse flex items-center gap-1.5">
                   <ShieldAlert className="h-4 w-4 animate-bounce" />
-                  <span>Courier Incident Active!</span>
+                  <span>Robot Incident Active!</span>
                 </span>
                 <span className="text-xs font-bold text-zinc-400">
                   {(incidentTimeLeft / 1000).toFixed(1)}s
@@ -291,7 +324,7 @@ export default function TrackingPage() {
                 <h3 className="font-extrabold text-white text-sm">
                   {activeOrder.activeIncident.prompt}
                 </h3>
-                {activeOrder.activeIncident.type === "pothole" && (
+                {(activeOrder.activeIncident.type === "pothole" || activeOrder.activeIncident.type === "signalJam") && (
                   <div className="flex space-x-1.5 justify-center py-2 bg-zinc-950 rounded-xl border border-zinc-800">
                     <span className="text-xs text-zinc-500 mr-2 self-center font-bold">Sequence:</span>
                     {activeOrder.activeIncident.sequence?.map((sym, idx) => (
@@ -320,7 +353,7 @@ export default function TrackingPage() {
 
               {/* Minigame Interactive area */}
               <div className="grid grid-cols-1 gap-2 pt-2">
-                {activeOrder.activeIncident.type === "pothole" ? (
+                {(activeOrder.activeIncident.type === "pothole" || activeOrder.activeIncident.type === "signalJam") ? (
                   <div className="grid grid-cols-3 gap-2">
                     {shuffledPotholeSymbols.map((sym, idx) => (
                       <button

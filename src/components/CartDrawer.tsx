@@ -173,7 +173,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       <span className="text-white">${tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-base font-black text-white pt-2 border-t border-zinc-800">
-                      <span>Fake Total</span>
+                      <span>Total</span>
                       <span className="text-neon-pink text-neon-glow-pink">${total.toFixed(2)}</span>
                     </div>
                   </div>

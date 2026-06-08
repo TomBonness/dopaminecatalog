@@ -280,54 +280,57 @@ export default function RewardsPage() {
 
       </div>
 
-      {/* Courier Upgrades Section */}
+      {/* Courier Robot Parts Section */}
       <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-6 shadow-md">
         <div className="flex items-center space-x-2 border-b border-zinc-800 pb-3">
           <ShoppingBag className="h-5 w-5 text-neon-yellow animate-pulse" />
           <h3 className="font-black text-sm uppercase tracking-wider text-zinc-300">
-            Permanent Courier Upgrades
+            Courier Robot Parts Shop
           </h3>
         </div>
         <p className="text-xs text-zinc-500">
-          Invest your Dopamine Coins (DC) in cyber-parts to optimize your delivery speed, combo timings, and incident resistances.
+          Invest your Dopamine Coins (DC) in hardware parts to upgrade your courier robot to handle incident categories, speed up delivery, and optimize rewards.
         </p>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
-              id: "neon-gps",
-              name: "Neon GPS Upgrade",
+              id: "route-memory",
+              name: "Route Memory Core",
               cost: 150,
               levelReq: 2,
               icon: "🛰️",
-              desc: "Direction minigames grant an extra +5% delivery progress bonus on success."
+              desc: "Improves route/minigame rewards and adds +5% progress bonus on navigation incidents."
             },
             {
-              id: "turbo-battery",
-              name: "Turbo Battery",
+              id: "signal-booster",
+              name: "Signal Booster Antenna",
               cost: 250,
               levelReq: 3,
-              icon: "🔋",
-              desc: "Extends Turbo Boost combo window to 2.5 seconds (default is 1.2s)."
+              icon: "📡",
+              desc: "Extends Turbo Boost combo window to 2.5s and adds +6s extra time to Signal Jam and GPS incidents."
             },
             {
-              id: "shock-absorbers",
-              name: "Shock Absorbers",
+              id: "cargo-clamps",
+              name: "Magnetic Cargo Clamps",
               cost: 350,
               levelReq: 5,
-              icon: "🏍️",
-              desc: "Failed or expired incidents no longer apply progress penalty."
+              icon: "🧲",
+              desc: "Reduces/forgives Cargo Balance and Pothole penalties. Failed or expired incidents apply 0 progress penalty."
             },
             {
-              id: "lucky-routing",
-              name: "Lucky Routing",
+              id: "kitchen-sensors",
+              name: "Kitchen Sensor Arrays",
               cost: 500,
               levelReq: 7,
-              icon: "🍀",
-              desc: "Incident completions have a 25% chance of rolling +15 DC bonus."
+              icon: "🌡️",
+              desc: "Reduces/forgives Kitchen incident penalties. Completion grants +15 DC bonus."
             }
           ].map(upgrade => {
-            const isOwned = ownedUpgrades.includes(upgrade.id);
+            const isOwned = ownedUpgrades.includes(upgrade.id) || 
+                            (upgrade.id === "route-memory" && ownedUpgrades.includes("neon-gps")) ||
+                            (upgrade.id === "signal-booster" && ownedUpgrades.includes("turbo-battery")) ||
+                            (upgrade.id === "cargo-clamps" && ownedUpgrades.includes("shock-absorbers")) ||
+                            (upgrade.id === "kitchen-sensors" && ownedUpgrades.includes("lucky-routing"));
             const isLevelLocked = level < upgrade.levelReq;
             const canAfford = dopamineCoins >= upgrade.cost;
 

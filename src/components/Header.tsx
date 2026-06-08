@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
             {/* Owned Perks Indicator */}
             {ownedUpgrades && ownedUpgrades.length > 0 && (
               <div className="h-8 sm:h-10 hidden xs:flex items-center justify-center space-x-1 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-green/30 text-neon-green shadow-[0_0_10px_rgba(57,255,20,0.15)] select-none shrink-0">
-                <span className="text-[10px] sm:text-xs font-black">⚡ {ownedUpgrades.length} Perk{ownedUpgrades.length > 1 ? "s" : ""}</span>
+                <span className="text-[10px] sm:text-xs font-black">⚡ {ownedUpgrades.length} Part{ownedUpgrades.length > 1 ? "s" : ""}</span>
               </div>
             )}
 

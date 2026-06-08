@@ -3,20 +3,26 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { MenuItem, MenuItemOption, Restaurant } from "@/lib/mockData";
 import { useAudio } from "./AudioContext";
-export const createIncident = (type: "gps" | "pothole" | "gatecode", level: number): Incident => {
-  const duration = 12000;
+export type IncidentType = "gps" | "pothole" | "gatecode" | "kitchenSort" | "heatSync" | "signalJam" | "cargoBalance" | "lockerSync";
+
+export const createIncident = (type: IncidentType, level: number, ownedUpgrades: string[] = []): Incident => {
+  const hasBatteryUpgrade = ownedUpgrades.includes("turbo-battery") || ownedUpgrades.includes("signal-booster");
+  let duration = 12000;
+  if (hasBatteryUpgrade && (type === "gps" || type === "signalJam")) {
+    duration += 6000;
+  }
   const expiresAt = Date.now() + duration;
   const id = "inc_" + Math.random().toString(36).substring(2, 9);
 
   if (type === "gps") {
     const gpsPool = [
       {
-        prompt: "Driver hit a neon alley fork. Which way avoids the drone traffic?",
+        prompt: "Robot hit a neon alley fork. Which way avoids the drone traffic?",
         options: ["Left Alley (High Voltage)", "Right Bypass (Drone Swarm)", "Center Underpass (Clear)"],
         correctOptionIndex: 2
       },
       {
-        prompt: "A delivery drone is tailing the courier! What evasive maneuver should they take?",
+        prompt: "A delivery drone is tailing the robot! What evasive maneuver should it take?",
         options: ["Deceptive Decoy Drop", "S-Curve Speed Boost", "Chaff Flare Release"],
         correctOptionIndex: 1
       },
@@ -30,6 +36,7 @@ export const createIncident = (type: "gps" | "pothole" | "gatecode", level: numb
     return {
       id,
       type,
+      phase: "route",
       prompt: item.prompt,
       options: item.options,
       correctOptionIndex: item.correctOptionIndex,
@@ -48,6 +55,7 @@ export const createIncident = (type: "gps" | "pothole" | "gatecode", level: numb
     return {
       id,
       type,
+      phase: "route",
       prompt: "Warning: Pothole field detected! Tap the sequence to calibrate hover shields:",
       options: sequence,
       correctOptionIndex: 0,
@@ -55,7 +63,7 @@ export const createIncident = (type: "gps" | "pothole" | "gatecode", level: numb
       expiresAt,
       duration
     };
-  } else {
+  } else if (type === "gatecode") {
     const codes = ["#4F9C", "#7A2B", "#9E5D", "#3B8F", "#1C6E", "#8D4A"];
     const targetCode = codes[Math.floor(Math.random() * codes.length)];
     const incorrect1 = targetCode.substring(0, 3) + (targetCode[3] === "A" ? "B" : "A");
@@ -69,14 +77,170 @@ export const createIncident = (type: "gps" | "pothole" | "gatecode", level: numb
     return {
       id,
       type,
+      phase: "dropoff",
       prompt: `Security gate at Neon Gated Heights! Match the passcode: ${targetCode}`,
       options,
       correctOptionIndex,
       expiresAt,
       duration
     };
+  } else if (type === "kitchenSort") {
+    const itemsPool = [
+      {
+        prompt: "Missing burger topping detected in the assembly line! What should be added?",
+        options: ["Micro-Pickles", "Quantum Patty", "Cyber Cheese", "Plasma Sauce"],
+        correctOptionIndex: 0
+      },
+      {
+        prompt: "Sake dispenser is misaligned. Select the correct delivery tube configuration:",
+        options: ["Tube A (Overpressure)", "Tube B (Miscalibrated)", "Tube C (Locked & Standard)"],
+        correctOptionIndex: 2
+      },
+      {
+        prompt: "Order sorting algorithm stalled! Choose the correct delivery bin for Order #77:",
+        options: ["Bin Alpha (Local)", "Bin Beta (Priority Node)", "Bin Gamma (Express Port)"],
+        correctOptionIndex: 1
+      }
+    ];
+    const item = itemsPool[Math.floor(Math.random() * itemsPool.length)];
+    return {
+      id,
+      type,
+      phase: "kitchen",
+      prompt: item.prompt,
+      options: item.options,
+      correctOptionIndex: item.correctOptionIndex,
+      expiresAt,
+      duration
+    };
+  } else if (type === "heatSync") {
+    const heatPool = [
+      {
+        prompt: "Grill temperatures are reaching critical overload! Choose the coolant flow setting:",
+        options: ["10% flow (Ineffective)", "50% flow (Optimal stabilization)", "100% flow (System freeze)"],
+        correctOptionIndex: 1
+      },
+      {
+        prompt: "Waffle-fry deep fryer temperature sync lost. Select the target oil thermal band:",
+        options: ["High thermal (Risk of flame)", "Optimal thermal (Clean crisp)", "Low thermal (Soggy fries)"],
+        correctOptionIndex: 1
+      }
+    ];
+    const item = heatPool[Math.floor(Math.random() * heatPool.length)];
+    return {
+      id,
+      type,
+      phase: "kitchen",
+      prompt: item.prompt,
+      options: item.options,
+      correctOptionIndex: item.correctOptionIndex,
+      expiresAt,
+      duration
+    };
+  } else if (type === "signalJam") {
+    const symbols = ["⚡", "📶", "🔌", "📡", "🔑", "🛡️"];
+    const sequence: string[] = [];
+    while (sequence.length < 3) {
+      const sym = symbols[Math.floor(Math.random() * symbols.length)];
+      if (!sequence.includes(sym)) {
+        sequence.push(sym);
+      }
+    }
+    return {
+      id,
+      type,
+      phase: "route",
+      prompt: "Signal jammed! Input the correct encryption signal pattern to restore comms:",
+      options: sequence,
+      correctOptionIndex: 0,
+      sequence,
+      expiresAt,
+      duration
+    };
+  } else if (type === "cargoBalance") {
+    const balancePool = [
+      {
+        prompt: "Courier robot has lost balance on a wet cyber-turn! Engage stabilizer:",
+        options: ["Portside thruster (Over-corrects)", "Engage anti-gravity clamps (Secured)", "Starboard thruster (Spins out)"],
+        correctOptionIndex: 1
+      },
+      {
+        prompt: "Soda cups shifting due to high-speed kinetic force! Select suspension damping:",
+        options: ["Rigid dampers (Spills likely)", "Fluid dampers (Dynamic leveling)", "Soft dampers (Too bouncy)"],
+        correctOptionIndex: 1
+      }
+    ];
+    const item = balancePool[Math.floor(Math.random() * balancePool.length)];
+    return {
+      id,
+      type,
+      phase: "route",
+      prompt: item.prompt,
+      options: item.options,
+      correctOptionIndex: item.correctOptionIndex,
+      expiresAt,
+      duration
+    };
+  } else { // lockerSync
+    const colorCodePool = [
+      {
+        prompt: "Delivery locker requires synchronization! Select the Green-45 receptor:",
+        options: ["Green-42 (Sync error)", "Red-45 (Mismatched band)", "Green-45 (Connection synced)"],
+        correctOptionIndex: 2
+      },
+      {
+        prompt: "Dropoff hub airlock code requested. Select the valid signature match:",
+        options: ["Signature Alpha (Approved)", "Signature Beta (Rejected)", "Signature Gamma (Expired)"],
+        correctOptionIndex: 0
+      }
+    ];
+    const item = colorCodePool[Math.floor(Math.random() * colorCodePool.length)];
+    return {
+      id,
+      type,
+      phase: "dropoff",
+      prompt: item.prompt,
+      options: item.options,
+      correctOptionIndex: item.correctOptionIndex,
+      expiresAt,
+      duration
+    };
   }
 };
+
+export function getIncidentTypeForMilestone(milestone: number, level: number): IncidentType | null {
+  if (milestone === 25) {
+    const pool: IncidentType[] = ["kitchenSort"];
+    if (level >= 2) pool.push("heatSync");
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  
+  if (milestone === 50 || milestone === 75) {
+    const pool: IncidentType[] = [];
+    if (level >= 2) pool.push("gps");
+    if (level >= 3) {
+      pool.push("pothole");
+      pool.push("signalJam");
+    }
+    if (level >= 4) pool.push("cargoBalance");
+
+    if (pool.length === 0) return "kitchenSort";
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  if (milestone === 90) {
+    const pool: IncidentType[] = [];
+    if (level >= 5) pool.push("gatecode");
+    if (level >= 6) pool.push("lockerSync");
+
+    if (pool.length === 0) {
+      return getIncidentTypeForMilestone(50, level);
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  return null;
+}
 
 export interface CartItem {
   cartItemId: string; // unique ID including customization
@@ -87,7 +251,8 @@ export interface CartItem {
 
 export interface Incident {
   id: string;
-  type: "gps" | "pothole" | "gatecode";
+  type: IncidentType;
+  phase: "kitchen" | "route" | "dropoff";
   prompt: string;
   options: string[];
   correctOptionIndex: number;
@@ -95,6 +260,10 @@ export interface Incident {
   duration: number;
   sequence?: string[];
   potholeSymbols?: string[];
+  target?: string;
+  payload?: any;
+  difficulty?: number;
+  displayLabel?: string;
 }
 
 export interface Order {
@@ -113,6 +282,7 @@ export interface Order {
   failedIncidentCount: number;
   incidentStreak: number;
   triggeredMilestones?: number[];
+  routeId?: number;
 }
 
 export interface UserStats {
@@ -158,6 +328,54 @@ export interface QuestClaimed {
   crisisManager: boolean;
 }
 
+export interface QuestConfig {
+  target: number;
+  xp: number;
+  coins: number;
+  title: string;
+  desc: string;
+}
+
+export const getQuestConfig = (level: number): Record<keyof QuestProgress, QuestConfig> => {
+  const levelOffset = level - 1;
+
+  const turboTarget = Math.min(25 + levelOffset * 5, 100);
+  const scratchTarget = Math.min(2 + Math.floor(levelOffset / 3), 5);
+  const feastTarget = Math.min(2 + Math.floor(levelOffset / 4), 6);
+  const crisisTarget = Math.min(4 + Math.floor(levelOffset / 2), 10);
+
+  return {
+    turboBoost: {
+      target: turboTarget,
+      xp: 150 + (turboTarget - 25) * 4,
+      coins: 50 + Math.floor((turboTarget - 25) * 1.5),
+      title: "Turbo Boost",
+      desc: `Speed up courier robot ${turboTarget} times.`
+    },
+    serotoninScratch: {
+      target: scratchTarget,
+      xp: 100 + (scratchTarget - 2) * 50,
+      coins: 30 + (scratchTarget - 2) * 15,
+      title: "Serotonin Scratch",
+      desc: `Play ${scratchTarget} scratch-off cards.`
+    },
+    dopamineFeast: {
+      target: feastTarget,
+      xp: 200 + (feastTarget - 2) * 75,
+      coins: 60 + (feastTarget - 2) * 20,
+      title: "Dopamine Feast",
+      desc: `Place ${feastTarget} orders.`
+    },
+    crisisManager: {
+      target: crisisTarget,
+      xp: 250 + (crisisTarget - 4) * 50,
+      coins: 80 + (crisisTarget - 4) * 15,
+      title: "Crisis Manager",
+      desc: `Resolve ${crisisTarget} delivery incidents.`
+    }
+  };
+};
+
 interface StateContextProps {
   points: number;
   dopamineCoins: number;
@@ -177,6 +395,7 @@ interface StateContextProps {
   triggerDopamineRush: () => void;
   questProgress: QuestProgress;
   questClaimed: QuestClaimed;
+  questConfig: Record<keyof QuestProgress, QuestConfig>;
   incrementQuestProgress: (questId: keyof QuestProgress, amount?: number) => void;
   claimQuestReward: (questId: keyof QuestProgress) => void;
   ownedUpgrades: string[];
@@ -396,35 +615,19 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         
         let activeIncident = prev.activeIncident;
         const triggeredMilestones = prev.triggeredMilestones || [];
-        const milestones = [25, 50, 75];
-        if (currentLevel >= 7) milestones.push(90);
-
+        const milestones = [25, 50, 75, 90];
         let newTriggered = [...triggeredMilestones];
-        let incidentToTrigger: "gps" | "pothole" | "gatecode" | null = null;
-
+        let incidentToTrigger: IncidentType | null = null;
         for (const m of milestones) {
           if (nextProgress >= m && !triggeredMilestones.includes(m)) {
             newTriggered.push(m);
-            if (m === 25 && currentLevel >= 2) {
-              incidentToTrigger = "gps";
-            } else if (m === 50 && currentLevel >= 3) {
-              incidentToTrigger = "pothole";
-            } else if (m === 75 && currentLevel >= 5) {
-              incidentToTrigger = "gatecode";
-            } else if (m === 90 && currentLevel >= 7) {
-              const pool: ("gps" | "pothole" | "gatecode")[] = ["gps"];
-              if (currentLevel >= 3) pool.push("pothole");
-              if (currentLevel >= 5) pool.push("gatecode");
-              incidentToTrigger = pool[Math.floor(Math.random() * pool.length)];
-            }
+            incidentToTrigger = getIncidentTypeForMilestone(m, currentLevel);
             break;
           }
         }
-
         if (incidentToTrigger && !activeIncident) {
-          activeIncident = createIncident(incidentToTrigger, currentLevel);
+          activeIncident = createIncident(incidentToTrigger, currentLevel, ownedUpgrades);
         }
-
         return {
           ...prev,
           deliveryProgress: nextProgress,
@@ -436,7 +639,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [activeOrder !== null, points]);
+  }, [activeOrder !== null, points, ownedUpgrades]);
 
   // Synchronize stats with AWS backend endpoint
   const syncStatsWithServer = useCallback(async () => {
@@ -476,6 +679,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const pointsInCurrentLevel = points % 500;
   const pointsToNextLevel = 500 - pointsInCurrentLevel;
   const pointsPercent = (pointsInCurrentLevel / 500) * 100;
+  const questConfig = getQuestConfig(level);
 
   // Rank Names
   let rankName = "Fry Cadet";
@@ -590,43 +794,30 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const incrementQuestProgress = useCallback((questId: keyof QuestProgress, amount: number = 1) => {
     setQuestProgress(prev => {
-      const limits: Record<keyof QuestProgress, number> = {
-        turboBoost: 15,
-        serotoninScratch: 1,
-        dopamineFeast: 1,
-        crisisManager: 3,
-      };
-      const maxVal = limits[questId];
+      const currentLevel = Math.floor(points / 500) + 1;
+      const config = getQuestConfig(currentLevel);
+      const maxVal = config[questId].target;
       if (prev[questId] >= maxVal) return prev;
       return {
         ...prev,
         [questId]: Math.min(prev[questId] + amount, maxVal)
       };
     });
-  }, []);
+  }, [points]);
 
   const claimQuestReward = useCallback((questId: keyof QuestProgress) => {
-    const limits: Record<keyof QuestProgress, number> = {
-      turboBoost: 15,
-      serotoninScratch: 1,
-      dopamineFeast: 1,
-      crisisManager: 3,
-    };
-    const rewards: Record<keyof QuestProgress, { xp: number; coins: number }> = {
-      turboBoost: { xp: 150, coins: 50 },
-      serotoninScratch: { xp: 100, coins: 30 },
-      dopamineFeast: { xp: 200, coins: 60 },
-      crisisManager: { xp: 250, coins: 80 },
-    };
+    const currentLevel = Math.floor(points / 500) + 1;
+    const config = getQuestConfig(currentLevel);
+    const target = config[questId].target;
+    const { xp, coins } = config[questId];
 
     setQuestProgress(currProgress => {
-      const isCompleted = currProgress[questId] >= limits[questId];
+      const isCompleted = currProgress[questId] >= target;
       if (!isCompleted) return currProgress;
 
       setQuestClaimed(currClaimed => {
         if (currClaimed[questId]) return currClaimed;
 
-        const { xp, coins } = rewards[questId];
         setPoints(prev => prev + xp);
         setDopamineCoins(prev => Math.max(0, prev + coins));
         play("rankup");
@@ -639,7 +830,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return currProgress;
     });
-  }, [play]);
+  }, [play, points]);
 
   // Order placement
   const placeOrder = (restaurant: Restaurant) => {
@@ -672,7 +863,8 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       resolvedIncidentCount: 0,
       failedIncidentCount: 0,
       incidentStreak: 0,
-      triggeredMilestones: []
+      triggeredMilestones: [],
+      routeId: Math.floor(Math.random() * 4)
     };
 
     setActiveOrder(newOrder);
@@ -722,33 +914,18 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       let activeIncident = prev.activeIncident;
       const triggeredMilestones = prev.triggeredMilestones || [];
-      const milestones = [25, 50, 75];
-      if (currentLevel >= 7) milestones.push(90);
-
+      const milestones = [25, 50, 75, 90];
       let newTriggered = [...triggeredMilestones];
-      let incidentToTrigger: "gps" | "pothole" | "gatecode" | null = null;
-
+      let incidentToTrigger: IncidentType | null = null;
       for (const m of milestones) {
         if (nextProgress >= m && !triggeredMilestones.includes(m)) {
           newTriggered.push(m);
-          if (m === 25 && currentLevel >= 2) {
-            incidentToTrigger = "gps";
-          } else if (m === 50 && currentLevel >= 3) {
-            incidentToTrigger = "pothole";
-          } else if (m === 75 && currentLevel >= 5) {
-            incidentToTrigger = "gatecode";
-          } else if (m === 90 && currentLevel >= 7) {
-            const pool: ("gps" | "pothole" | "gatecode")[] = ["gps"];
-            if (currentLevel >= 3) pool.push("pothole");
-            if (currentLevel >= 5) pool.push("gatecode");
-            incidentToTrigger = pool[Math.floor(Math.random() * pool.length)];
-          }
+          incidentToTrigger = getIncidentTypeForMilestone(m, currentLevel);
           break;
         }
       }
-
       if (incidentToTrigger && !activeIncident) {
-        activeIncident = createIncident(incidentToTrigger, currentLevel);
+        activeIncident = createIncident(incidentToTrigger, currentLevel, ownedUpgrades);
       }
 
       if (newClicks >= 20) {
@@ -769,67 +946,65 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const currentLevel = Math.floor(points / 500) + 1;
     setActiveOrder(prev => {
       if (!prev || !prev.activeIncident) return prev;
-      
       const type = prev.activeIncident.type;
       let newStreak = prev.incidentStreak || 0;
       let resolvedCount = prev.resolvedIncidentCount || 0;
       let failedCount = prev.failedIncidentCount || 0;
       let nextProgress = prev.deliveryProgress;
-
+      const hasGPSUpgrade = ownedUpgrades.includes("neon-gps") || ownedUpgrades.includes("route-memory");
+      const hasAbsorbersUpgrade = ownedUpgrades.includes("shock-absorbers") || ownedUpgrades.includes("cargo-clamps");
+      const hasRoutingUpgrade = ownedUpgrades.includes("lucky-routing") || ownedUpgrades.includes("kitchen-sensors");
       if (success) {
         play("boost");
         newStreak += 1;
         resolvedCount += 1;
-        
         let xpReward = 20;
         let dcReward = 5;
         let progressBonus = 8;
-
-        if (type === "pothole") {
+        if (type === "pothole" || type === "signalJam" || type === "cargoBalance") {
           xpReward = 35;
           dcReward = 8;
           progressBonus = 12;
-        } else if (type === "gatecode") {
+        } else if (type === "gatecode" || type === "lockerSync") {
           xpReward = 50;
           dcReward = 15;
           progressBonus = 15;
         }
-
-        if (type === "gps" && ownedUpgrades.includes("neon-gps")) {
+        if (type === "gps" && hasGPSUpgrade) {
           progressBonus += 5;
         }
-
         if (currentLevel >= 7) {
           xpReward = Math.floor(xpReward * 1.5);
           dcReward = Math.floor(dcReward * 1.5);
         }
-
-        if (ownedUpgrades.includes("lucky-routing")) {
-          if (Math.random() < 0.25) {
-            dcReward += 15;
-          }
+        if (hasRoutingUpgrade) {
+          dcReward += 15;
         }
-
         const multiplier = dopamineRushActive ? 2 : 1;
         xpReward *= multiplier;
         dcReward *= multiplier;
-
         setPoints(p => p + xpReward);
         setDopamineCoins(c => Math.max(0, c + dcReward));
-
         nextProgress = Math.min(nextProgress + progressBonus, 100);
         incrementQuestProgress("crisisManager", 1);
       } else {
         play("horn");
         newStreak = 0;
         failedCount += 1;
-
-        if (!ownedUpgrades.includes("shock-absorbers")) {
-          let penalty = 5;
-          if (type === "pothole") penalty = 8;
-          else if (type === "gatecode") penalty = 10;
-          nextProgress = Math.max(0, nextProgress - penalty);
+        let penalty = 5;
+        if (type === "pothole" || type === "cargoBalance") penalty = 8;
+        else if (type === "gatecode" || type === "lockerSync") penalty = 10;
+        if (hasAbsorbersUpgrade) {
+          if (type !== "kitchenSort" && type !== "heatSync") {
+            penalty = 0;
+          }
         }
+        if (hasRoutingUpgrade) {
+          if (type === "kitchenSort" || type === "heatSync") {
+            penalty = 0;
+          }
+        }
+        nextProgress = Math.max(0, nextProgress - penalty);
       }
 
       return {
@@ -962,6 +1137,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         triggerDopamineRush,
         questProgress,
         questClaimed,
+        questConfig,
         incrementQuestProgress,
         claimQuestReward,
         addToCart,

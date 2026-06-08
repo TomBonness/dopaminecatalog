@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Store, Home, Bike } from "lucide-react";
+import { Store, Home, Bot } from "lucide-react";
 import { useAppState } from "@/context/StateContext";
 
 interface TrackingMapProps {
@@ -11,55 +11,89 @@ interface TrackingMapProps {
 
 export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
   const { activeOrder } = useAppState();
-  // Path definition:
-  // Waypoints:
-  // 1. Restaurant: (40, 160)
-  // 2. Corner 1: (120, 160)
-  // 3. Corner 2: (120, 100)
-  // 4. Corner 3: (260, 100)
-  // 5. Corner 4: (260, 40)
-  // 6. User Capsule: (360, 40)
-  // Total lengths of segments: 80, 60, 140, 60, 100. Sum = 440.
-  
-  const getCourierCoords = (pct: number) => {
-    const totalLength = 440;
-    const currentDist = (pct / 100) * totalLength;
-
-    if (currentDist <= 80) {
-      // Segment 1: Restaurant to Corner 1 (Horizontal right)
-      return { x: 40 + currentDist, y: 160, angle: 0 };
-    } else if (currentDist <= 140) {
-      // Segment 2: Corner 1 to Corner 2 (Vertical up)
-      const d = currentDist - 80;
-      return { x: 120, y: 160 - d, angle: -90 };
-    } else if (currentDist <= 280) {
-      // Segment 3: Corner 2 to Corner 3 (Horizontal right)
-      const d = currentDist - 140;
-      return { x: 120 + d, y: 100, angle: 0 };
-    } else if (currentDist <= 340) {
-      // Segment 4: Corner 3 to Corner 4 (Vertical up)
-      const d = currentDist - 280;
-      return { x: 260, y: 100 - d, angle: -90 };
-    } else {
-      // Segment 5: Corner 4 to House (Horizontal right)
-      const d = currentDist - 340;
-      return { x: 260 + d, y: 40, angle: 0 };
+  const ROUTE_VARIANTS = [
+    // Route 0 (original)
+    [
+      { x: 40, y: 160 },
+      { x: 120, y: 160 },
+      { x: 120, y: 100 },
+      { x: 260, y: 100 },
+      { x: 260, y: 40 },
+      { x: 360, y: 40 }
+    ],
+    // Route 1
+    [
+      { x: 40, y: 160 },
+      { x: 40, y: 100 },
+      { x: 180, y: 100 },
+      { x: 180, y: 40 },
+      { x: 360, y: 40 }
+    ],
+    // Route 2
+    [
+      { x: 40, y: 160 },
+      { x: 220, y: 160 },
+      { x: 220, y: 80 },
+      { x: 360, y: 80 },
+      { x: 360, y: 40 }
+    ],
+    // Route 3
+    [
+      { x: 40, y: 160 },
+      { x: 160, y: 160 },
+      { x: 160, y: 40 },
+      { x: 360, y: 40 }
+    ]
+  ];
+  const getPointAlongRoute = (points: { x: number; y: number }[], pct: number) => {
+    if (points.length === 0) return { x: 0, y: 0, angle: 0 };
+    if (points.length === 1) return { x: points[0].x, y: points[0].y, angle: 0 };
+    const segments: { p1: { x: number; y: number }; p2: { x: number; y: number }; length: number }[] = [];
+    let totalLength = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      segments.push({ p1, p2, length });
+      totalLength += length;
     }
+    const targetDist = (pct / 100) * totalLength;
+    let currentDist = 0;
+    for (const seg of segments) {
+      if (targetDist <= currentDist + seg.length || seg === segments[segments.length - 1]) {
+        const segDist = targetDist - currentDist;
+        const t = seg.length > 0 ? segDist / seg.length : 0;
+        const x = seg.p1.x + (seg.p2.x - seg.p1.x) * t;
+        const y = seg.p1.y + (seg.p2.y - seg.p1.y) * t;
+        const angle = Math.atan2(seg.p2.y - seg.p1.y, seg.p2.x - seg.p1.x) * (180 / Math.PI);
+        return { x, y, angle };
+      }
+      currentDist += seg.length;
+    }
+    const last = points[points.length - 1];
+    return { x: last.x, y: last.y, angle: 0 };
   };
-
-  const coords = getCourierCoords(progress);
-
+  const routeId = activeOrder?.routeId ?? 0;
+  const route = ROUTE_VARIANTS[routeId] || ROUTE_VARIANTS[0];
+  const coords = getPointAlongRoute(route, progress);
+  const pathD = route.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   const getIncidentCoords = () => {
     if (!activeOrder?.activeIncident) return null;
     const prog = activeOrder.deliveryProgress;
-    if (prog <= 40) return { x: 120, y: 130, label: "GPS" };
-    if (prog <= 65) return { x: 200, y: 100, label: "Pothole" };
-    if (prog <= 85) return { x: 260, y: 50, label: "Gate" };
-    return { x: 316, y: 40, label: "Crisis" };
+    let incidentProgress = prog;
+    if (activeOrder.activeIncident.type === "gps" || activeOrder.activeIncident.type === "kitchenSort" || activeOrder.activeIncident.type === "heatSync") {
+      incidentProgress = Math.min(prog, 25);
+    } else if (activeOrder.activeIncident.type === "pothole" || activeOrder.activeIncident.type === "signalJam" || activeOrder.activeIncident.type === "cargoBalance") {
+      incidentProgress = Math.min(prog, 55);
+    } else {
+      incidentProgress = Math.min(prog, 85);
+    }
+    const pt = getPointAlongRoute(route, incidentProgress);
+    return { x: pt.x, y: pt.y };
   };
-
   const incidentCoords = getIncidentCoords();
-
   return (
     <div className="relative w-full max-w-lg mx-auto bg-zinc-950 border border-zinc-800 rounded-3xl p-6 overflow-hidden aspect-[400/220]">
       {/* Decorative Grid Lines */}
@@ -78,7 +112,7 @@ export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
         
         {/* The Cyber-Road Map Grid */}
         <path
-          d="M 40 160 L 120 160 L 120 100 L 260 100 L 260 40 L 360 40"
+          d={pathD}
           fill="none"
           stroke="#18181b"
           strokeWidth="12"
@@ -88,7 +122,7 @@ export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
 
         {/* The active neon delivery path */}
         <path
-          d="M 40 160 L 120 160 L 120 100 L 260 100 L 260 40 L 360 40"
+          d={pathD}
           fill="none"
           stroke="url(#neonGradient)"
           strokeWidth="6"
@@ -146,7 +180,7 @@ export const TrackingMap: React.FC<TrackingMapProps> = ({ progress }) => {
         >
           <rect x="-14" y="-14" width="28" height="28" rx="8" fill="#09090b" stroke="#00f0ff" strokeWidth="2" className="shadow-[0_0_10px_#00f0ff]" />
           <foreignObject x="-7" y="-7" width="14" height="14" transform="rotate(0)">
-            <Bike className="h-3.5 w-3.5 text-neon-cyan text-neon-glow-cyan" />
+            <Bot className="h-3.5 w-3.5 text-neon-cyan text-neon-glow-cyan" />
           </foreignObject>
         </g>
       </svg>
