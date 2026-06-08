@@ -8,14 +8,13 @@ import { Star, Clock, Sparkles, MapPin, Award, Trash2, ArrowRight, Lock } from "
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { formatCash } from "@/lib/currency";
 
 export default function HomePage() {
   const { play } = useAudio();
   const {
     points,
     level,
-    moneySaved,
-    impulsiveDecisionsAvoided,
     unlockedBadges,
     resetStats,
     dopamineRushActive,
@@ -123,7 +122,7 @@ export default function HomePage() {
               desc: config.desc,
               current: questProgress[id] || 0,
               target: config.target,
-              reward: `+${config.xp} XP & +${config.coins} DC`
+              reward: `+${config.xp} XP & +${formatCash(config.coins)}`
             };
           }).map(quest => {
             const isCompleted = quest.current >= quest.target;
@@ -363,51 +362,6 @@ export default function HomePage() {
           </button>
         </Link>
       </motion.div>
-      {/* 5. Dopamine Stats Dashboard (placed at the bottom of the page) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Money Saved */}
-        <motion.div
-          whileHover={{ y: -4 }}
-          className="p-5 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-5 text-4xl font-black text-neon-green">$$$</div>
-          <span className="text-xs font-extrabold text-zinc-500 uppercase tracking-widest block">Money Saved</span>
-          <span className="text-4xl font-black text-neon-green text-neon-glow-green block mt-2">
-            ${moneySaved.toFixed(2)}
-          </span>
-          <span className="text-[10px] text-zinc-400 block mt-1">
-            Saved by skipping real delivery apps
-          </span>
-        </motion.div>
-        {/* Impulse Buys Avoided */}
-        <motion.div
-          whileHover={{ y: -4 }}
-          className="p-5 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-5 text-4xl font-black text-neon-pink">🛒</div>
-          <span className="text-xs font-extrabold text-zinc-500 uppercase tracking-widest block">Impulses Deflected</span>
-          <span className="text-4xl font-black text-neon-pink text-neon-glow-pink block mt-2">
-            {impulsiveDecisionsAvoided}
-          </span>
-          <span className="text-[10px] text-zinc-400 block mt-1">
-            Fake orders completed successfully
-          </span>
-        </motion.div>
-        {/* Total Badges */}
-        <motion.div
-          whileHover={{ y: -4 }}
-          className="p-5 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col justify-between h-32 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-5 text-4xl font-black text-neon-yellow">🏆</div>
-          <span className="text-xs font-extrabold text-zinc-500 uppercase tracking-widest block">Unlocked Badges</span>
-          <span className="text-4xl font-black text-neon-yellow text-neon-glow-yellow block mt-2">
-            {unlockedBadges.length}
-          </span>
-          <span className="text-[10px] text-zinc-400 block mt-1">
-            Achievements earned in delivery loops
-          </span>
-        </motion.div>
-      </div>
     </div>
   );
 }

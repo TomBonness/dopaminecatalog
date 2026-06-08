@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { MenuItem, MenuItemOption, Restaurant } from "@/lib/mockData";
 import { useAudio } from "./AudioContext";
+import { scrambleOptions } from "@/lib/currency";
 export type IncidentType = "gps" | "pothole" | "gatecode" | "kitchenSort" | "heatSync" | "signalJam" | "cargoBalance" | "lockerSync";
 
 export const createIncident = (type: IncidentType, level: number, ownedUpgrades: string[] = []): Incident => {
@@ -57,7 +58,7 @@ export const createIncident = (type: IncidentType, level: number, ownedUpgrades:
       type,
       phase: "route",
       prompt: "Warning: Pothole field detected! Tap the sequence to calibrate hover shields:",
-      options: sequence,
+      options: scrambleOptions(sequence, symbols),
       correctOptionIndex: 0,
       sequence,
       expiresAt,
@@ -151,7 +152,7 @@ export const createIncident = (type: IncidentType, level: number, ownedUpgrades:
       type,
       phase: "route",
       prompt: "Signal jammed! Input the correct encryption signal pattern to restore comms:",
-      options: sequence,
+      options: scrambleOptions(sequence, symbols),
       correctOptionIndex: 0,
       sequence,
       expiresAt,
@@ -266,6 +267,55 @@ export interface Incident {
   displayLabel?: string;
 }
 
+export interface RobotPart {
+  id: string;
+  name: string;
+  cost: number;
+  levelReq: number;
+  icon: string;
+  desc: string;
+  alias?: string;
+}
+
+export const ROBOT_PARTS: RobotPart[] = [
+  {
+    id: "route-memory",
+    name: "Route Memory Core",
+    cost: 1200,
+    levelReq: 4,
+    icon: "🛰️",
+    desc: "Improves route/minigame rewards and adds +5% progress bonus on navigation incidents.",
+    alias: "neon-gps"
+  },
+  {
+    id: "signal-booster",
+    name: "Signal Booster Antenna",
+    cost: 2500,
+    levelReq: 6,
+    icon: "📡",
+    desc: "Extends Turbo Boost combo window to 2.5s and adds +6s extra time to Signal Jam and GPS incidents.",
+    alias: "turbo-battery"
+  },
+  {
+    id: "cargo-clamps",
+    name: "Magnetic Cargo Clamps",
+    cost: 4500,
+    levelReq: 9,
+    icon: "🧲",
+    desc: "Reduces/forgives Cargo Balance and Pothole penalties. Failed or expired incidents apply 0 progress penalty.",
+    alias: "shock-absorbers"
+  },
+  {
+    id: "kitchen-sensors",
+    name: "Kitchen Sensor Arrays",
+    cost: 7500,
+    levelReq: 12,
+    icon: "🌡️",
+    desc: "Reduces/forgives Kitchen incident penalties. Completion grants +$15 cash bonus.",
+    alias: "lucky-routing"
+  }
+];
+
 export interface Order {
   id: string;
   restaurantId: string;
@@ -283,6 +333,9 @@ export interface Order {
   incidentStreak: number;
   triggeredMilestones?: number[];
   routeId?: number;
+  orderCost: number;
+  videoPayout?: number;
+  videoScore?: number;
 }
 
 export interface UserStats {
@@ -405,9 +458,9 @@ interface StateContextProps {
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, delta: number) => void;
   clearCart: () => void;
-  placeOrder: (restaurant: Restaurant) => void;
+  placeOrder: (restaurant: Restaurant) => boolean;
   boostCourier: (isCombo?: boolean) => void;
-  completeActiveOrder: () => void;
+  completeActiveOrder: (result?: { payout: number; score: number }) => void;
   addPoints: (amount: number) => void;
   addCoins: (amount: number) => void;
   unlockBadge: (badgeId: string) => void;
@@ -833,16 +886,19 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [play, points]);
 
   // Order placement
-  const placeOrder = (restaurant: Restaurant) => {
-    if (cart.length === 0) return;
-
+  const placeOrder = (restaurant: Restaurant): boolean => {
+    if (cart.length === 0) return false;
     // Calculate subtotal
     const subtotal = cart.reduce((acc, item) => {
       const optionsCost = item.selectedOptions.reduce((oAcc, o) => oAcc + o.price, 0);
       return acc + (item.menuItem.price + optionsCost) * item.quantity;
     }, 0);
-    const totalCost = subtotal + restaurant.deliveryFee;
-
+    const tax = subtotal * 0.085;
+    const totalCost = subtotal > 0 ? subtotal + restaurant.deliveryFee + tax : 0;
+    if (dopamineCoins < totalCost) {
+      play("lock");
+      return false;
+    }
     // Calculate dopamine points earned
     const itemsPoints = cart.reduce((acc, item) => acc + (item.menuItem.dopaminePoints * item.quantity), 0);
     const orderPoints = itemsPoints + 100; // 100 flat points for placing order
@@ -864,14 +920,13 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       failedIncidentCount: 0,
       incidentStreak: 0,
       triggeredMilestones: [],
-      routeId: Math.floor(Math.random() * 4)
+      routeId: Math.floor(Math.random() * 4),
+      orderCost: totalCost
     };
-
+    setDopamineCoins(prev => Math.max(0, prev - totalCost));
     setActiveOrder(newOrder);
     setCart([]); // Clear cart
     play("checkout");
-    addCoins(coinsEarned);
-
     // Track statistics
     setMoneySaved(prev => {
       const nextSaved = prev + totalCost;
@@ -884,10 +939,10 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setImpulsiveDecisionsAvoided(prev => prev + 1);
     addPoints(orderPoints);
     unlockBadge("first-hit");
-
     // Quest & Rush updates
     incrementQuestProgress("dopamineFeast", 1);
     triggerDopamineRush();
+    return true;
   };
 
   // Turbo boost button spam
@@ -1020,23 +1075,15 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [play, ownedUpgrades, points, dopamineRushActive, incrementQuestProgress]);
 
   const buyUpgrade = useCallback((upgradeId: string) => {
-    const prices: Record<string, number> = {
-      "neon-gps": 150,
-      "turbo-battery": 250,
-      "shock-absorbers": 350,
-      "lucky-routing": 500
-    };
-    const levelReqs: Record<string, number> = {
-      "neon-gps": 2,
-      "turbo-battery": 3,
-      "shock-absorbers": 5,
-      "lucky-routing": 7
-    };
-
-    const price = prices[upgradeId] || 0;
-    const req = levelReqs[upgradeId] || 1;
+    // Find matching part in ROBOT_PARTS, matching id or alias
+    const part = ROBOT_PARTS.find(p => p.id === upgradeId || p.alias === upgradeId);
+    if (!part) {
+      play("lock");
+      return;
+    }
+    const price = part.cost;
+    const req = part.levelReq;
     const currentLevel = Math.floor(points / 500) + 1;
-
     if (currentLevel < req) {
       play("lock");
       return;
@@ -1045,23 +1092,25 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       play("lock");
       return;
     }
-    if (ownedUpgrades.includes(upgradeId)) {
+    // Check if owned (either by id or alias)
+    const isOwned = ownedUpgrades.includes(part.id) || (part.alias && ownedUpgrades.includes(part.alias));
+    if (isOwned) {
       return;
     }
-
     play("checkout");
     setDopamineCoins(prev => Math.max(0, prev - price));
-    setOwnedUpgrades(prev => [...prev, upgradeId]);
+    // Store the canonical part id when purchased
+    setOwnedUpgrades(prev => [...prev, part.id]);
   }, [points, dopamineCoins, ownedUpgrades, play]);
-
   // Complete delivery
-  const completeActiveOrder = () => {
+  const completeActiveOrder = (result?: { payout: number; score: number }) => {
     if (!activeOrder) return;
-
     play("delivery");
     setOrdersCompletedCount(prev => prev + 1);
+    if (result && typeof result.payout === "number") {
+      setDopamineCoins(prev => Math.max(0, prev + result.payout));
+    }
     setActiveOrder(null);
-
     // Trigger dopamine rush
     triggerDopamineRush();
   };

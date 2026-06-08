@@ -32,8 +32,7 @@ function simulatePlaceOrder(cartItems, deliveryFee) {
   // dopaminePoints per item
   const itemsPoints = cartItems.reduce((acc, item) => acc + (item.dopaminePoints * item.quantity), 0);
   const orderPoints = itemsPoints + 100; // 100 flat points
-  const coinsEarned = Math.floor(orderPoints / 5);
-  return { orderPoints, coinsEarned };
+  return { orderPoints };
 }
 
 console.log('- Testing Order Placement payouts...');
@@ -44,7 +43,6 @@ const mockCart = [
 ];
 const payout = simulatePlaceOrder(mockCart, 1.99);
 assert.strictEqual(payout.orderPoints, 450 * 1 + 200 * 2 + 100); // 450 + 400 + 100 = 950 XP
-assert.strictEqual(payout.coinsEarned, Math.floor(950 / 5)); // 190 DC
 console.log('✓ Order Placement payouts are correct.');
 
 // 3. Courier Boost Rewards
@@ -259,24 +257,24 @@ function testIncidentsAndUpgrades() {
   // 6. Test upgrade buying restrictions
   function canBuyUpgrade(upgradeId, level, coins, ownedUpgrades) {
     const prices = {
-      "neon-gps": 150,
-      "route-memory": 150,
-      "turbo-battery": 250,
-      "signal-booster": 250,
-      "shock-absorbers": 350,
-      "cargo-clamps": 350,
-      "lucky-routing": 500,
-      "kitchen-sensors": 500
+      "neon-gps": 1200,
+      "route-memory": 1200,
+      "turbo-battery": 2500,
+      "signal-booster": 2500,
+      "shock-absorbers": 4500,
+      "cargo-clamps": 4500,
+      "lucky-routing": 7500,
+      "kitchen-sensors": 7500
     };
     const levelReqs = {
-      "neon-gps": 2,
-      "route-memory": 2,
-      "turbo-battery": 3,
-      "signal-booster": 3,
-      "shock-absorbers": 5,
-      "cargo-clamps": 5,
-      "lucky-routing": 7,
-      "kitchen-sensors": 7
+      "neon-gps": 4,
+      "route-memory": 4,
+      "turbo-battery": 6,
+      "signal-booster": 6,
+      "shock-absorbers": 9,
+      "cargo-clamps": 9,
+      "lucky-routing": 12,
+      "kitchen-sensors": 12
     };
     const price = prices[upgradeId];
     const req = levelReqs[upgradeId];
@@ -293,14 +291,14 @@ function testIncidentsAndUpgrades() {
     if (upgradeId === "lucky-routing" && ownedUpgrades.includes("kitchen-sensors")) return "ALREADY_OWNED";
     return "SUCCESS";
   }
-  assert.strictEqual(canBuyUpgrade("neon-gps", 1, 200, []), "LOCKED_LEVEL");
-  assert.strictEqual(canBuyUpgrade("neon-gps", 2, 100, []), "INSUFFICIENT_COINS");
-  assert.strictEqual(canBuyUpgrade("neon-gps", 2, 200, ["neon-gps"]), "ALREADY_OWNED");
-  assert.strictEqual(canBuyUpgrade("neon-gps", 2, 200, []), "SUCCESS");
-  assert.strictEqual(canBuyUpgrade("cargo-clamps", 4, 400, []), "LOCKED_LEVEL");
-  assert.strictEqual(canBuyUpgrade("cargo-clamps", 5, 300, []), "INSUFFICIENT_COINS");
-  assert.strictEqual(canBuyUpgrade("cargo-clamps", 5, 400, ["shock-absorbers"]), "ALREADY_OWNED");
-  assert.strictEqual(canBuyUpgrade("cargo-clamps", 5, 400, []), "SUCCESS");
+  assert.strictEqual(canBuyUpgrade("neon-gps", 3, 2000, []), "LOCKED_LEVEL");
+  assert.strictEqual(canBuyUpgrade("neon-gps", 4, 1000, []), "INSUFFICIENT_COINS");
+  assert.strictEqual(canBuyUpgrade("neon-gps", 4, 2000, ["neon-glow-core"]), "SUCCESS"); // not owned
+  assert.strictEqual(canBuyUpgrade("neon-gps", 4, 2000, ["neon-gps"]), "ALREADY_OWNED");
+  assert.strictEqual(canBuyUpgrade("cargo-clamps", 8, 5000, []), "LOCKED_LEVEL");
+  assert.strictEqual(canBuyUpgrade("cargo-clamps", 9, 3000, []), "INSUFFICIENT_COINS");
+  assert.strictEqual(canBuyUpgrade("cargo-clamps", 9, 5000, ["shock-absorbers"]), "ALREADY_OWNED");
+  assert.strictEqual(canBuyUpgrade("cargo-clamps", 9, 5000, []), "SUCCESS");
   console.log('✓ Incident and upgrade rules are correct.');
 }
 // 7. Route Interpolation Helper Test
@@ -347,7 +345,100 @@ function testRouteInterpolation() {
   assert.strictEqual(pt75.angle, 90);
   console.log('✓ Route interpolation is correct.');
 }
+function testNewEconomyAndScrambling() {
+  console.log('- Testing New Economy, Mukbang Payout, and Option Scrambling...');
+
+  // 1. Scramble Options Test
+  function scrambleOptions(sequence, allSymbols) {
+    const decoys = allSymbols.filter(s => !sequence.includes(s));
+    const chosenDecoys = [];
+    const availableDecoys = [...decoys];
+    while (chosenDecoys.length < Math.min(3, availableDecoys.length)) {
+      const idx = Math.floor(Math.random() * availableDecoys.length);
+      chosenDecoys.push(availableDecoys[idx]);
+      availableDecoys.splice(idx, 1);
+    }
+    const pool = [...sequence, ...chosenDecoys];
+    let shuffled = [...pool];
+    let attempts = 0;
+    while (attempts < 10) {
+      shuffled.sort(() => Math.random() - 0.5);
+      let isIdentical = true;
+      for (let i = 0; i < sequence.length; i++) {
+        if (shuffled[i] !== sequence[i]) {
+          isIdentical = false;
+          break;
+        }
+      }
+      if (!isIdentical) {
+        break;
+      }
+      attempts++;
+    }
+    if (attempts >= 10 && shuffled.length > 1) {
+      const temp = shuffled[0];
+      shuffled[0] = shuffled[1];
+      shuffled[1] = temp;
+    }
+    return shuffled;
+  }
+
+  const sequence = ["▲", "▼", "◀"];
+  const allSymbols = ["▲", "▼", "◀", "▶", "●", "■"];
+  const scrambled = scrambleOptions(sequence, allSymbols);
+
+  for (const s of sequence) {
+    assert(scrambled.includes(s), `Scrambled options must contain ${s}`);
+  }
+  assert(scrambled.length > sequence.length, "Scrambled options must contain decoys");
+  let identical = true;
+  for (let i = 0; i < sequence.length; i++) {
+    if (scrambled[i] !== sequence[i]) {
+      identical = false;
+      break;
+    }
+  }
+  assert(!identical, "Scrambled options must not match sequence order exactly");
+
+  // 2. Checkout Affordability Test
+  let dopamineCoins = 100;
+  function simulateCheckout(orderCost) {
+    if (dopamineCoins < orderCost) {
+      return false;
+    }
+    dopamineCoins -= orderCost;
+    return true;
+  }
+  assert.strictEqual(simulateCheckout(120), false);
+  assert.strictEqual(dopamineCoins, 100);
+  assert.strictEqual(simulateCheckout(80), true);
+  assert.strictEqual(dopamineCoins, 20);
+
+  // 3. Mukbang Payout Test
+  function calculateMukbangPayout(orderCost, mistakes, durationSec) {
+    const basePayout = orderCost * 1.15;
+    const accuracy = mistakes === 0 ? 1.2 : Math.max(0.2, 1 - mistakes * 0.15);
+    let speedMult = 0.8;
+    if (durationSec < 4) {
+      speedMult = 1.3;
+    } else if (durationSec < 7) {
+      speedMult = 1.1;
+    }
+    const rawMultiplier = accuracy * speedMult;
+    const multiplier = Math.max(0.5, Math.min(2.25, rawMultiplier));
+    return Math.round(basePayout * multiplier * 100) / 100;
+  }
+
+  const perfectPayout = calculateMukbangPayout(50, 0, 3);
+  assert.strictEqual(perfectPayout, 89.7);
+
+  const slowPayout = calculateMukbangPayout(50, 4, 12);
+  assert.strictEqual(slowPayout, 28.75);
+
+  console.log('✓ New Economy, Mukbang Payout, and Option Scrambling are correct.');
+}
 testQuests();
 testIncidentsAndUpgrades();
 testRouteInterpolation();
+testNewEconomyAndScrambling();
 console.log('All tests passed successfully!');

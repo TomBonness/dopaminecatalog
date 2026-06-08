@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAppState, BADGES } from "@/context/StateContext";
+import { useAppState, BADGES, ROBOT_PARTS } from "@/context/StateContext";
+import { formatCash } from "@/lib/currency";
 import { useAudio } from "@/context/AudioContext";
 import { ScratchCard } from "@/components/ScratchCard";
 import { Award, Sparkles, Coins, ShoppingBag, Landmark } from "lucide-react";
@@ -16,8 +17,6 @@ export default function RewardsPage() {
     addPoints,
     addCoins,
     unlockBadge,
-    moneySaved,
-    impulsiveDecisionsAvoided,
     dopamineRushActive,
     incrementQuestProgress,
     pointsToNextLevel,
@@ -32,7 +31,7 @@ export default function RewardsPage() {
   const TICKET_COST = 80;
   const handleBuyTicket = () => {
     if (dopamineCoins < TICKET_COST) {
-      alert("You need at least 80 Dopamine Coins to purchase a Serotonin Lottery Ticket! Place more orders to earn coins.");
+      alert(`You need at least ${formatCash(TICKET_COST)} Creator Cash to purchase a Serotonin Lottery Ticket! Place more orders and film mukbangs to earn cash.`);
       return;
     }
     play("pop");
@@ -54,19 +53,19 @@ export default function RewardsPage() {
       const coins = amountsCoins[Math.floor(Math.random() * amountsCoins.length)];
       const finalXp = xp * multiplier;
       const finalCoins = coins * multiplier;
-      text = `+${finalXp} XP & +${finalCoins} DC`;
+      text = `+${finalXp} XP & +${formatCash(finalCoins)}`;
       value = { type: "reward", xp: finalXp, coins: finalCoins };
     } else if (roll < 0.85) {
       // Jackpot points: XP & Coins
       const xp = 300 * multiplier;
       const coins = 100 * multiplier;
-      text = `🌟 JACKPOT! +${xp} XP & +${coins} DC`;
+      text = `🌟 JACKPOT! +${xp} XP & +${formatCash(coins)}`;
       value = { type: "reward", xp, coins };
     } else {
       // Badge reward + some XP & Coins
       const xp = 100 * multiplier;
       const coins = 50 * multiplier;
-      text = `🎰 Lucky Gambler Badge! +${xp} XP & +${coins} DC`;
+      text = `🎰 Lucky Gambler Badge! +${xp} XP & +${formatCash(coins)}`;
       value = { type: "badge", xp, coins, val: "lucky-gambler" };
     }
     setRewardText(text);
@@ -129,7 +128,7 @@ export default function RewardsPage() {
               <span className="text-[9px] font-black text-zinc-500 tracking-wider block">MODEL-950 EUPHORIA</span>
             </div>
             <p className="text-[11px] text-zinc-400 leading-normal px-2">
-              Feed <span className="text-neon-yellow font-extrabold">80 DC</span> into the slot to print a scratch card. Jackpot yields up to <span className="text-neon-cyan font-extrabold">+300 XP & +100 DC</span>!
+              Feed <span className="text-neon-yellow font-extrabold">{formatCash(TICKET_COST)}</span> into the slot to print a scratch card. Jackpot yields up to <span className="text-neon-cyan font-extrabold">+300 XP & +{formatCash(100)}</span>!
             </p>
             {/* Custom Ticket Slot Insert */}
             <div className="py-2.5 bg-zinc-900/60 rounded-2xl border border-zinc-800/80 flex flex-col items-center justify-center">
@@ -143,8 +142,8 @@ export default function RewardsPage() {
             </div>
             <div className="flex flex-col gap-2">
               <div className="h-10 w-full flex items-center justify-center bg-zinc-900/40 border border-zinc-800/60 rounded-xl">
-                <span className="text-xs text-zinc-400 font-bold">Balance: </span>
-                <span className="text-sm font-black text-neon-yellow text-neon-glow-yellow ml-1.5">{dopamineCoins} DC</span>
+                <span className="text-xs text-zinc-400 font-bold">Creator Cash: </span>
+                <span className="text-sm font-black text-neon-yellow text-neon-glow-yellow ml-1.5">{formatCash(dopamineCoins)}</span>
               </div>
               <div className="h-10 w-full flex items-center justify-center bg-zinc-900/40 border border-zinc-800/60 rounded-xl">
                 <span className="text-xs text-zinc-400 font-bold">XP Level: </span>
@@ -157,7 +156,7 @@ export default function RewardsPage() {
                 disabled={dopamineCoins < TICKET_COST}
                 className="w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest text-black bg-gradient-to-r from-neon-yellow to-neon-green hover:shadow-[0_0_25px_rgba(57,255,20,0.5)] disabled:from-zinc-900 disabled:to-zinc-900 disabled:text-zinc-600 disabled:border-zinc-800 disabled:shadow-none hover:scale-102 transition-all border-2 border-transparent active:scale-[0.98]"
               >
-                Insert 80 DC
+                Insert {formatCash(TICKET_COST)}
               </button>
             )}
             {ticketState !== "idle" && (
@@ -199,9 +198,9 @@ export default function RewardsPage() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full p-5 rounded-2xl bg-zinc-900 border border-neon-yellow text-center space-y-3 shadow-[0_0_15px_rgba(255,231,0,0.15)]"
             >
-              <h4 className="font-black text-sm text-neon-yellow uppercase tracking-wider">Out of Dopamine Coins</h4>
+              <h4 className="font-black text-sm text-neon-yellow uppercase tracking-wider">Out of Creator Cash</h4>
               <p className="text-[11px] text-zinc-400">
-                You only have <span className="text-white font-bold">{dopamineCoins} DC</span>. You need {TICKET_COST} DC to purchase a scratch-off.
+                You only have <span className="text-white font-bold">{formatCash(dopamineCoins)}</span>. You need {formatCash(TICKET_COST)} to purchase a scratch-off.
               </p>
               <Link
                 href="/"
@@ -289,51 +288,14 @@ export default function RewardsPage() {
           </h3>
         </div>
         <p className="text-xs text-zinc-500">
-          Invest your Dopamine Coins (DC) in hardware parts to upgrade your courier robot to handle incident categories, speed up delivery, and optimize rewards.
+          Invest your Creator Cash in hardware parts to upgrade your courier robot to handle incident categories, speed up delivery, and optimize rewards.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              id: "route-memory",
-              name: "Route Memory Core",
-              cost: 150,
-              levelReq: 2,
-              icon: "🛰️",
-              desc: "Improves route/minigame rewards and adds +5% progress bonus on navigation incidents."
-            },
-            {
-              id: "signal-booster",
-              name: "Signal Booster Antenna",
-              cost: 250,
-              levelReq: 3,
-              icon: "📡",
-              desc: "Extends Turbo Boost combo window to 2.5s and adds +6s extra time to Signal Jam and GPS incidents."
-            },
-            {
-              id: "cargo-clamps",
-              name: "Magnetic Cargo Clamps",
-              cost: 350,
-              levelReq: 5,
-              icon: "🧲",
-              desc: "Reduces/forgives Cargo Balance and Pothole penalties. Failed or expired incidents apply 0 progress penalty."
-            },
-            {
-              id: "kitchen-sensors",
-              name: "Kitchen Sensor Arrays",
-              cost: 500,
-              levelReq: 7,
-              icon: "🌡️",
-              desc: "Reduces/forgives Kitchen incident penalties. Completion grants +15 DC bonus."
-            }
-          ].map(upgrade => {
+          {ROBOT_PARTS.map(upgrade => {
             const isOwned = ownedUpgrades.includes(upgrade.id) || 
-                            (upgrade.id === "route-memory" && ownedUpgrades.includes("neon-gps")) ||
-                            (upgrade.id === "signal-booster" && ownedUpgrades.includes("turbo-battery")) ||
-                            (upgrade.id === "cargo-clamps" && ownedUpgrades.includes("shock-absorbers")) ||
-                            (upgrade.id === "kitchen-sensors" && ownedUpgrades.includes("lucky-routing"));
+                            (upgrade.alias && ownedUpgrades.includes(upgrade.alias));
             const isLevelLocked = level < upgrade.levelReq;
             const canAfford = dopamineCoins >= upgrade.cost;
-
             return (
               <div
                 key={upgrade.id}
@@ -357,7 +319,7 @@ export default function RewardsPage() {
                 <div className="pt-2 border-t border-zinc-900/60 flex flex-col gap-2">
                   <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400">
                     <span>Cost:</span>
-                    <span className="text-neon-yellow">{upgrade.cost} DC</span>
+                    <span className="text-neon-yellow">{formatCash(upgrade.cost)}</span>
                   </div>
 
                   {isOwned ? (
@@ -384,7 +346,7 @@ export default function RewardsPage() {
                           : "bg-zinc-900 text-zinc-500 border-zinc-800 cursor-not-allowed"
                       }`}
                     >
-                      {canAfford ? "Purchase Upgrade" : "Insufficient DC"}
+                      {canAfford ? "Purchase Upgrade" : "Insufficient Cash"}
                     </button>
                   )}
                 </div>
@@ -394,35 +356,6 @@ export default function RewardsPage() {
         </div>
       </div>
 
-      {/* Addiction Analytics footer card */}
-      <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/30 grid grid-cols-1 sm:grid-cols-3 gap-6 shadow-sm">
-        <div className="space-y-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start space-x-1.5 text-zinc-500 text-xs font-black uppercase tracking-widest">
-            <Coins className="h-3.5 w-3.5 text-neon-green" />
-            <span>Money Avoided</span>
-          </div>
-          <span className="text-xl font-black text-neon-green text-neon-glow-green block mt-1">${moneySaved.toFixed(2)}</span>
-          <span className="text-[10px] text-zinc-500 block">Total simulated cart checkout value saved.</span>
-        </div>
-
-        <div className="space-y-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start space-x-1.5 text-zinc-500 text-xs font-black uppercase tracking-widest">
-            <ShoppingBag className="h-3.5 w-3.5 text-neon-pink" />
-            <span>Avoided Deliveries</span>
-          </div>
-          <span className="text-xl font-black text-neon-pink text-neon-glow-pink block mt-1">{impulsiveDecisionsAvoided} orders</span>
-          <span className="text-[10px] text-zinc-500 block">Impulsive real-world clicks deflected here.</span>
-        </div>
-
-        <div className="space-y-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start space-x-1.5 text-zinc-500 text-xs font-black uppercase tracking-widest">
-            <Landmark className="h-3.5 w-3.5 text-neon-yellow" />
-            <span>Dopamine Saved</span>
-          </div>
-          <span className="text-xl font-black text-neon-yellow text-neon-glow-yellow block mt-1">INFINITE</span>
-          <span className="text-[10px] text-zinc-500 block">Real bank account remains perfectly safe.</span>
-        </div>
-      </div>
 
     </div>
   );

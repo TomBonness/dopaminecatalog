@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppState } from "@/context/StateContext";
+import { formatCash } from "@/lib/currency";
 import { Trophy, ShoppingBag, Gift, MapPin, Coins } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -74,9 +75,10 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
             )}
 
             {/* Dopamine Coins Indicator */}
+            {/* Creator Cash Indicator */}
             <div className="h-8 sm:h-10 flex items-center justify-center space-x-1 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-yellow/30 text-neon-yellow shadow-[0_0_10px_rgba(255,231,0,0.15)] select-none hover:shadow-[0_0_15px_rgba(255,231,0,0.3)] transition-all shrink-0">
               <Coins className="h-3.5 w-3.5 sm:h-4 w-4 text-neon-yellow" />
-              <span className="text-[10px] sm:text-xs font-black text-neon-glow-yellow">{dopamineCoins} <span className="hidden xs:inline">DC</span></span>
+              <span className="text-[10px] sm:text-xs font-black text-neon-glow-yellow">{formatCash(dopamineCoins)}</span>
             </div>
 
             {/* Owned Perks Indicator */}

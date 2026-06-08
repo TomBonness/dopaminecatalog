@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useAppState } from "@/context/StateContext";
 import { useAudio } from "@/context/AudioContext";
+import { formatCash, scrambleOptions } from "@/lib/currency";
 import { TrackingMap } from "@/components/TrackingMap";
 import { Bot, ShieldAlert, Rocket, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +28,98 @@ export default function TrackingPage() {
     ownedUpgrades,
     resolveIncident
   } = useAppState();
+
+  // Mukbang Video minigame states
+  const [mukbangActive, setMukbangActive] = useState<boolean>(false);
+  const [mukbangSequence, setMukbangSequence] = useState<string[]>([]);
+  const [mukbangOptions, setMukbangOptions] = useState<string[]>([]);
+  const [mukbangProgress, setMukbangProgress] = useState<number>(0);
+  const [mukbangMistakes, setMukbangMistakes] = useState<number>(0);
+  const [mukbangStartTime, setMukbangStartTime] = useState<number>(0);
+  const [mukbangResult, setMukbangResult] = useState<{
+    score: number;
+    accuracy: number;
+    payout: number;
+    perfect: boolean;
+    duration: number;
+  } | null>(null);
+
+  const startMukbang = () => {
+    const pool = ["↑", "↓", "←", "→", "A", "B", "7", "3", "9"];
+    const seq: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      seq.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    setMukbangSequence(seq);
+    const opts = scrambleOptions(Array.from(new Set(seq)), pool);
+    setMukbangOptions(opts);
+    setMukbangProgress(0);
+    setMukbangMistakes(0);
+    setMukbangStartTime(Date.now());
+    setMukbangActive(true);
+    setMukbangResult(null);
+    play("pop");
+  };
+
+  const handleMukbangTap = (symbol: string) => {
+    const targetSymbol = mukbangSequence[mukbangProgress];
+    if (symbol === targetSymbol) {
+      play("pop");
+      const nextProgress = mukbangProgress + 1;
+      setMukbangProgress(nextProgress);
+      if (nextProgress >= mukbangSequence.length) {
+        const durationSec = (Date.now() - mukbangStartTime) / 1000;
+        const orderCost = activeOrder?.orderCost || 15;
+        const basePayout = orderCost * 1.15;
+        const accuracy = mukbangMistakes === 0 ? 1.2 : Math.max(0.2, 1 - mukbangMistakes * 0.15);
+        let speedMult = 0.8;
+        if (durationSec < 4) {
+          speedMult = 1.3;
+        } else if (durationSec < 7) {
+          speedMult = 1.1;
+        }
+        const rawMultiplier = accuracy * speedMult;
+        const multiplier = Math.max(0.5, Math.min(2.25, rawMultiplier));
+        const payout = Math.round(basePayout * multiplier * 100) / 100;
+        let calculatedScore = Math.max(10, 100 - mukbangMistakes * 15);
+        if (durationSec < 4) calculatedScore += 15;
+        else if (durationSec > 10) calculatedScore = Math.max(10, calculatedScore - 20);
+
+        setMukbangResult({
+          score: Math.min(100, calculatedScore),
+          accuracy: mukbangMistakes === 0 ? 100 : Math.round(accuracy * 100),
+          payout,
+          perfect: mukbangMistakes === 0,
+          duration: durationSec
+        });
+        play("rankup");
+      }
+    } else {
+      play("horn");
+      setMukbangMistakes(prev => prev + 1);
+    }
+  };
+
+  useEffect(() => {
+    if (!mukbangActive || mukbangResult) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      let keySym = "";
+      if (e.key === "ArrowUp") keySym = "↑";
+      else if (e.key === "ArrowDown") keySym = "↓";
+      else if (e.key === "ArrowLeft") keySym = "←";
+      else if (e.key === "ArrowRight") keySym = "→";
+      else if (e.key.toUpperCase() === "A") keySym = "A";
+      else if (e.key.toUpperCase() === "B") keySym = "B";
+      else if (e.key === "7") keySym = "7";
+      else if (e.key === "3") keySym = "3";
+      else if (e.key === "9") keySym = "9";
+      if (keySym) {
+        handleMukbangTap(keySym);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mukbangActive, mukbangResult, mukbangProgress, mukbangSequence]);
 
   const [shuffledPotholeSymbols, setShuffledPotholeSymbols] = useState<string[]>([]);
   const [potholeProgress, setPotholeProgress] = useState<number>(0);
@@ -70,12 +163,11 @@ export default function TrackingPage() {
   }, []);
 
   // Shuffle pothole sequence on change
+  // Shuffle pothole sequence on change
   useEffect(() => {
     const type = activeOrder?.activeIncident?.type;
     if (type === "pothole" || type === "signalJam") {
-      const seq = activeOrder?.activeIncident?.sequence || [];
-      const shuffled = [...seq].sort(() => Math.random() - 0.5);
-      setShuffledPotholeSymbols(shuffled);
+      setShuffledPotholeSymbols(activeOrder?.activeIncident?.options || []);
       setPotholeProgress(0);
     }
   }, [activeOrder?.activeIncident?.id]);
@@ -239,7 +331,7 @@ export default function TrackingPage() {
       id: `${Date.now()}-${Math.random()}`,
       x,
       y,
-      text: isCombo ? `🔥 COMBO X${combo}! +${xpVal} XP | +${dcVal} DC` : `🚀 BOOST! +${xpVal} XP | +${dcVal} DC`
+      text: isCombo ? `🔥 COMBO X${combo}! +${xpVal} XP | +$${dcVal}` : `🚀 BOOST! +${xpVal} XP | +$${dcVal}`
     };
     setFloatingTexts(prev => [...prev, newText]);
   };
@@ -421,26 +513,109 @@ export default function TrackingPage() {
             </div>
           )
         ) : (
-          /* Arrived / Claim Rewards Button */
+          /* Arrived / Mukbang Minigame UI */
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="w-full space-y-4"
           >
-            <div className="p-4 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-bold text-center">
-              🎉 Delivery capsule secured! Open it for instant satisfaction.
-            </div>
-            
-            <button
-              onClick={() => {
-                completeActiveOrder();
-                router.push("/rewards");
-              }}
-              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-neon-green shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:shadow-[0_0_35px_rgba(57,255,20,0.7)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
-            >
-              <span>Accept Delivery & Claim Reward (+{activeOrder.pointsEarned} XP {activeOrder.coinsEarned ? `& +${activeOrder.coinsEarned} DC` : ""})</span>
-              <ChevronRight className="h-5 w-5" />
-            </button>
+            {!mukbangActive && !mukbangResult && (
+              <div className="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-4 text-center">
+                <div className="p-3.5 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-bold">
+                  🎉 Delivery capsule secured! Ready to film the mukbang?
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-black text-sm uppercase tracking-wider text-white">🔴 Film Mukbang Video</h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Simulate eating your order to gain creator views and earn back Creator Cash!
+                  </p>
+                </div>
+                <button
+                  onClick={startMukbang}
+                  className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider text-black bg-neon-yellow shadow-[0_0_15px_rgba(255,231,0,0.3)] hover:shadow-[0_0_25px_rgba(255,231,0,0.6)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
+                >
+                  <span>Start Recording 🎥</span>
+                </button>
+              </div>
+            )}
+            {mukbangActive && !mukbangResult && (
+              <div className="p-5 rounded-2xl bg-zinc-900 border border-neon-pink space-y-4 text-center shadow-[0_0_15px_rgba(255,0,127,0.2)]">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-neon-pink animate-pulse">🔴 RECORDING MUKBANG VIDEO</span>
+                  <span className="text-[10px] font-bold text-zinc-500">Mistakes: <strong className="text-neon-pink">{mukbangMistakes}</strong></span>
+                </div>
+                <div className="space-y-2 py-3 bg-zinc-950 rounded-xl border border-zinc-850">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Mukbang Eat Combo Sequence</p>
+                  <div className="flex space-x-1.5 justify-center">
+                    {mukbangSequence.map((sym, idx) => (
+                      <span
+                        key={idx}
+                        className={`inline-flex items-center justify-center h-8 w-8 rounded-lg font-black text-sm border ${
+                          idx < mukbangProgress
+                            ? "bg-neon-green/20 border-neon-green text-neon-green shadow-[0_0_8px_rgba(57,255,20,0.3)]"
+                            : idx === mukbangProgress
+                            ? "bg-neon-pink/20 border-neon-pink text-neon-pink animate-pulse"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-600"
+                        }`}
+                      >
+                        {sym}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {mukbangOptions.map((sym, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleMukbangTap(sym)}
+                      className="py-3.5 rounded-xl bg-zinc-800 border border-zinc-700 hover:border-neon-pink hover:text-neon-pink text-white text-lg font-black transition-all active:scale-[0.93]"
+                    >
+                      {sym}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[9px] text-zinc-500 font-medium">
+                  Hint: Use arrow keys, letters, and numbers on your keyboard to play!
+                </p>
+              </div>
+            )}
+            {mukbangResult && (
+              <div className="p-5 rounded-2xl bg-zinc-900 border border-neon-green space-y-4 text-center shadow-[0_0_15px_rgba(57,255,20,0.2)]">
+                <div className="space-y-1">
+                  <h3 className="font-black text-sm uppercase tracking-wider text-neon-green">🎥 Video Uploaded!</h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Your mukbang stream went viral! Here is your performance breakdown:
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-3.5 rounded-xl border border-zinc-850 text-xs text-left">
+                  <div className="text-zinc-500">Clout Score:</div>
+                  <div className="font-black text-white text-right">{mukbangResult.score}/100</div>
+                  <div className="text-zinc-500">Accuracy:</div>
+                  <div className="font-black text-white text-right">{mukbangResult.accuracy}%</div>
+                  <div className="text-zinc-500">Time Taken:</div>
+                  <div className="font-black text-white text-right">{mukbangResult.duration.toFixed(1)}s</div>
+                  <div className="text-zinc-400 font-bold border-t border-zinc-850 pt-2 mt-1">Creator Payout:</div>
+                  <div className="font-black text-neon-yellow text-right border-t border-zinc-850 pt-2 mt-1 text-base">
+                    {formatCash(mukbangResult.payout)}
+                  </div>
+                </div>
+                {mukbangResult.perfect && (
+                  <div className="text-xs font-black text-neon-yellow animate-bounce py-1">
+                    🏆 PERFECT COMBO BONUS! 🏆
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    completeActiveOrder({ payout: mukbangResult.payout, score: mukbangResult.score });
+                    router.push("/rewards");
+                  }}
+                  className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider text-black bg-neon-green shadow-[0_0_15px_rgba(57,255,20,0.3)] hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-102 active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
+                >
+                  <span>Collect Payout & Go to Rewards</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </div>
@@ -468,10 +643,10 @@ export default function TrackingPage() {
           <span>Brain Points Earned</span>
           <span className="font-black text-neon-cyan">+{activeOrder.pointsEarned} XP</span>
         </div>
-        {activeOrder.coinsEarned !== undefined && (
+        {activeOrder.orderCost !== undefined && (
           <div className="flex justify-between">
-            <span>Dopamine Coins Earned</span>
-            <span className="font-black text-neon-yellow">+{activeOrder.coinsEarned} DC</span>
+            <span>Order Paid</span>
+            <span className="font-black text-neon-pink">-{formatCash(activeOrder.orderCost)}</span>
           </div>
         )}
       </div>

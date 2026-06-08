@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import { useAppState } from "@/context/StateContext";
+import { formatCash } from "@/lib/currency";
 import { MOCK_RESTAURANTS } from "@/lib/mockData";
 import { X, Trash2, Plus, Minus, BrainCircuit, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,7 +20,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     removeFromCart,
     updateQuantity,
     placeOrder,
-    moneySaved
+    dopamineCoins
   } = useAppState();
 
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -47,9 +48,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   const handleCheckout = () => {
     if (!restaurant) return;
-    placeOrder(restaurant);
-    onClose();
-    router.push("/tracking");
+    const success = placeOrder(restaurant);
+    if (success) {
+      onClose();
+      router.push("/tracking");
+    }
   };
 
   return (
@@ -172,25 +175,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       <span>Carbon Offset / Tax</span>
                       <span className="text-white">${tax.toFixed(2)}</span>
                     </div>
+                    <div className="flex justify-between text-xs font-bold text-zinc-400">
+                      <span>Creator Cash</span>
+                      <span className={dopamineCoins >= total ? "text-neon-green" : "text-neon-pink font-extrabold"}>
+                        {formatCash(dopamineCoins)}
+                      </span>
+                    </div>
                     <div className="flex justify-between text-base font-black text-white pt-2 border-t border-zinc-800">
                       <span>Total</span>
                       <span className="text-neon-pink text-neon-glow-pink">${total.toFixed(2)}</span>
                     </div>
-                  </div>
 
+                  </div>
                   <div className="p-3.5 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-bold flex items-center space-x-2.5">
                     <span>💵</span>
                     <span>
-                      You save <strong className="text-white">${total.toFixed(2)}</strong> in real money by choosing simulated food!
+                      Paid from your creator bankroll — no real checkout.
                     </span>
                   </div>
 
                   <button
                     onClick={handleCheckout}
-                    className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider text-white bg-zinc-950 border-2 border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:shadow-[0_0_25px_rgba(0,240,255,0.6)] active:scale-[0.98] transition-all flex items-center justify-center space-x-2"
+                    disabled={dopamineCoins < total}
+                    className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider text-white bg-zinc-950 border-2 border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:shadow-[0_0_25px_rgba(0,240,255,0.6)] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:border-zinc-800 disabled:text-zinc-500"
                   >
                     <ShoppingBag className="h-4 w-4 text-neon-cyan" />
-                    <span>PLACE ORDER</span>
+                    <span>{dopamineCoins >= total ? "PLACE ORDER" : "INSUFFICIENT FUNDS"}</span>
                   </button>
                 </div>
               )}
