@@ -4,6 +4,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { MenuItem, MenuItemOption, Restaurant } from "@/lib/mockData";
 import { useAudio } from "./AudioContext";
 import { scrambleOptions } from "@/lib/currency";
+import {
+  addViewInventoryItem,
+  EMPTY_VIEW_INVENTORY,
+  getViewInventoryMultiplier,
+  normalizeViewInventory,
+} from "@/lib/viewInventory";
+import type { ViewInventory, ViewInventoryItemId } from "@/lib/viewInventory";
 export type IncidentType = "gps" | "pothole" | "gatecode" | "kitchenSort" | "heatSync" | "signalJam" | "cargoBalance" | "lockerSync";
 
 export const createIncident = (type: IncidentType, level: number, ownedUpgrades: string[] = []): Incident => {
@@ -452,6 +459,9 @@ interface StateContextProps {
   incrementQuestProgress: (questId: keyof QuestProgress, amount?: number) => void;
   claimQuestReward: (questId: keyof QuestProgress) => void;
   ownedUpgrades: string[];
+  viewInventory: ViewInventory;
+  viewMultiplier: number;
+  awardViewInventoryItem: (itemId: ViewInventoryItemId, quantity?: number) => void;
   buyUpgrade: (upgradeId: string) => void;
   resolveIncident: (success: boolean) => void;
   addToCart: (menuItem: MenuItem, options: MenuItemOption[], quantity: number) => void;
@@ -460,7 +470,7 @@ interface StateContextProps {
   clearCart: () => void;
   placeOrder: (restaurant: Restaurant) => boolean;
   boostCourier: (isCombo?: boolean) => void;
-  completeActiveOrder: (result?: { payout: number; score: number }) => void;
+  completeActiveOrder: (result?: { payout: number; score: number; views?: number; viewMultiplier?: number }) => void;
   addPoints: (amount: number) => void;
   addCoins: (amount: number) => void;
   unlockBadge: (badgeId: string) => void;
@@ -500,6 +510,8 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     crisisManager: false,
   });
   const [ownedUpgrades, setOwnedUpgrades] = useState<string[]>([]);
+  const [viewInventory, setViewInventory] = useState<ViewInventory>(EMPTY_VIEW_INVENTORY);
+  const viewMultiplier = getViewInventoryMultiplier(viewInventory);
 
   // Initialize from LocalStorage
   useEffect(() => {
@@ -589,6 +601,14 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setOwnedUpgrades([]);
         }
       }
+      const savedInventory = localStorage.getItem("dopamine_inventory");
+      if (savedInventory) {
+        try {
+          setViewInventory(normalizeViewInventory(JSON.parse(savedInventory)));
+        } catch {
+          setViewInventory(EMPTY_VIEW_INVENTORY);
+        }
+      }
     }
   }, []);
 
@@ -605,8 +625,9 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("dopamine_quest_progress", JSON.stringify(questProgress));
       localStorage.setItem("dopamine_quest_claimed", JSON.stringify(questClaimed));
       localStorage.setItem("dopamine_owned_upgrades", JSON.stringify(ownedUpgrades));
+      localStorage.setItem("dopamine_inventory", JSON.stringify(viewInventory));
     }
-  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, questProgress, questClaimed, userId, ownedUpgrades]);
+  }, [points, dopamineCoins, ordersCompletedCount, moneySaved, impulsiveDecisionsAvoided, unlockedBadges, questProgress, questClaimed, userId, ownedUpgrades, viewInventory]);
 
   // Dopamine Rush countdown timer effect
   useEffect(() => {
@@ -1107,7 +1128,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOwnedUpgrades(prev => [...prev, part.id]);
   }, [points, dopamineCoins, ownedUpgrades, play]);
   // Complete delivery
-  const completeActiveOrder = (result?: { payout: number; score: number }) => {
+  const completeActiveOrder = (result?: { payout: number; score: number; views?: number; viewMultiplier?: number }) => {
     if (!activeOrder) return;
     play("delivery");
     setOrdersCompletedCount(prev => prev + 1);
@@ -1117,6 +1138,10 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveOrder(null);
     // Trigger dopamine rush
     triggerDopamineRush();
+  };
+
+  const awardViewInventoryItem = (itemId: ViewInventoryItemId, quantity: number = 1) => {
+    setViewInventory(prev => addViewInventoryItem(prev, itemId, quantity));
   };
 
   const resetStats = () => {
@@ -1143,6 +1168,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       crisisManager: false
     });
     setOwnedUpgrades([]);
+    setViewInventory(EMPTY_VIEW_INVENTORY);
     if (typeof window !== "undefined") {
       localStorage.setItem("dopamine_points", "100");
       localStorage.setItem("dopamine_coins", "100");
@@ -1154,6 +1180,7 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.removeItem("dopamine_active_order");
       localStorage.removeItem("dopamine_rush_expires_at");
       localStorage.setItem("dopamine_owned_upgrades", JSON.stringify([]));
+      localStorage.setItem("dopamine_inventory", JSON.stringify(EMPTY_VIEW_INVENTORY));
       localStorage.setItem("dopamine_quest_progress", JSON.stringify({
         turboBoost: 0,
         serotoninScratch: 0,
@@ -1206,6 +1233,9 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         syncStatsWithServer,
         resetStats,
         ownedUpgrades,
+        viewInventory,
+        viewMultiplier,
+        awardViewInventoryItem,
         buyUpgrade,
         resolveIncident
       }}

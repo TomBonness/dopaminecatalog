@@ -9,8 +9,21 @@ import { Award, Sparkles, Coins, ShoppingBag, Landmark } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { evaluateSlotSpin, SlotResult } from "@/lib/mukbang";
+import {
+  VIEW_INVENTORY_ITEMS,
+  VIEW_INVENTORY_ORDER,
+} from "@/lib/viewInventory";
+import type { ViewInventoryReward } from "@/lib/viewInventory";
 
 const SLOT_SYMBOLS = ["💎", "🍔", "🍕", "🍣", "🌮", "🍟", "🥤", "🍒", "🍋"];
+
+type ScratchRewardValue = {
+  type: "reward" | "badge";
+  xp: number;
+  coins: number;
+  val?: string;
+  inventoryReward?: ViewInventoryReward;
+};
 
 export default function RewardsPage() {
   const { play } = useAudio();
@@ -26,14 +39,17 @@ export default function RewardsPage() {
     pointsToNextLevel,
     level,
     ownedUpgrades,
-    buyUpgrade
+    buyUpgrade,
+    viewInventory,
+    viewMultiplier,
+    awardViewInventoryItem
   } = useAppState();
 
   // Scratch Card State
   const [ticketState, setTicketState] = useState<"idle" | "purchased" | "revealed">("idle");
   const [resetKey, setResetKey] = useState<number>(0);
   const [rewardText, setRewardText] = useState<string>(``);
-  const [rewardValue, setRewardValue] = useState<{ type: "reward" | "badge"; xp: number; coins: number; val?: string } | null>(null);
+  const [rewardValue, setRewardValue] = useState<ScratchRewardValue | null>(null);
   const TICKET_COST = 80;
 
   // Slot Machine State
@@ -51,7 +67,7 @@ export default function RewardsPage() {
     addCoins(-TICKET_COST);
     const roll = Math.random();
     let text = "";
-    let value: { type: "reward" | "badge"; xp: number; coins: number; val?: string };
+    let value: ScratchRewardValue;
 
     const multiplier = dopamineRushActive ? 2 : 1;
 
@@ -62,18 +78,18 @@ export default function RewardsPage() {
       const coins = amountsCoins[Math.floor(Math.random() * amountsCoins.length)];
       const finalXp = xp * multiplier;
       const finalCoins = coins * multiplier;
-      text = `+${finalXp} XP & +${formatCash(finalCoins)}`;
-      value = { type: "reward", xp: finalXp, coins: finalCoins };
+      value = { type: "reward", xp: finalXp, coins: finalCoins, inventoryReward: { itemId: "thumbnail-polish", quantity: 1 } };
+      text = `+${finalXp} XP & +${formatCash(finalCoins)} + ${VIEW_INVENTORY_ITEMS["thumbnail-polish"].name}`;
     } else if (roll < 0.85) {
       const xp = 300 * multiplier;
       const coins = 100 * multiplier;
-      text = `🌟 JACKPOT! +${xp} XP & +${formatCash(coins)}`;
-      value = { type: "reward", xp, coins };
+      value = { type: "reward", xp, coins, inventoryReward: { itemId: "ring-light-array", quantity: 1 } };
+      text = `🌟 JACKPOT! +${xp} XP & +${formatCash(coins)} + ${VIEW_INVENTORY_ITEMS["ring-light-array"].name}`;
     } else {
       const xp = 100 * multiplier;
       const coins = 50 * multiplier;
-      text = `🎰 Lucky Gambler Badge! +${xp} XP & +${formatCash(coins)}`;
-      value = { type: "badge", xp, coins, val: "lucky-gambler" };
+      value = { type: "badge", xp, coins, val: "lucky-gambler", inventoryReward: { itemId: "viral-edit-kit", quantity: 1 } };
+      text = `🎰 Lucky Gambler Badge! +${xp} XP & +${formatCash(coins)} + ${VIEW_INVENTORY_ITEMS["viral-edit-kit"].name}`;
     }
     setRewardText(text);
     setRewardValue(value);
@@ -93,6 +109,9 @@ export default function RewardsPage() {
       unlockBadge("lucky-gambler");
     }, 800);
 
+    if (rewardValue.inventoryReward) {
+      awardViewInventoryItem(rewardValue.inventoryReward.itemId, rewardValue.inventoryReward.quantity);
+    }
     incrementQuestProgress("serotoninScratch", 1);
     setTicketState("revealed");
   };
@@ -142,10 +161,15 @@ export default function RewardsPage() {
         }
 
         unlockBadge("lucky-gambler");
+        if (res.inventoryReward) {
+          awardViewInventoryItem(res.inventoryReward.itemId, res.inventoryReward.quantity);
+        }
       }
     }, 100);
   };
 
+
+  const hasViewInventory = !VIEW_INVENTORY_ORDER.every(itemId => viewInventory[itemId] === 0);
   return (
     <div className="max-w-4xl mx-auto space-y-10 pb-16 px-4">
       {/* Page Header */}
@@ -292,6 +316,11 @@ export default function RewardsPage() {
                     Award: +{slotResult.xpReward} XP
                   </div>
                 )}
+                {slotResult.inventoryReward && (
+                  <div>
+                    Gear: +{slotResult.inventoryReward.quantity} {VIEW_INVENTORY_ITEMS[slotResult.inventoryReward.itemId].name}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -306,6 +335,60 @@ export default function RewardsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-6 shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-zinc-800 pb-3">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-5 w-5 text-neon-cyan" />
+            <h3 className="font-black text-sm uppercase tracking-wider text-zinc-300">
+              Viral Gear Inventory
+            </h3>
+          </div>
+          <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-black">
+            Views x{viewMultiplier.toFixed(2)}
+          </span>
+        </div>
+        <p className="text-xs text-zinc-500">
+          Scratch tickets and slot wins add passive gear here. Every copy stacks into future MukBang Studio views, capped at x3.00.
+        </p>
+        {!hasViewInventory ? (
+          <div className="p-5 rounded-xl bg-zinc-950/60 border border-zinc-850 text-xs text-zinc-500 text-center">
+            No viral gear yet. Win scratch tickets or slot combos to boost future mukbang views.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {VIEW_INVENTORY_ORDER.map(itemId => {
+              const item = VIEW_INVENTORY_ITEMS[itemId];
+              const ownedCount = viewInventory[item.id];
+              return (
+                <div
+                  key={item.id}
+                  className={`p-4 rounded-xl border flex flex-col gap-3 text-left transition-all bg-zinc-950 ${
+                    ownedCount > 0
+                      ? "border-neon-cyan/50 shadow-[0_0_12px_rgba(0,255,255,0.12)]"
+                      : "border-zinc-850/50 opacity-45 grayscale"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-3xl">{item.icon}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+                      {item.rarity}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-black text-xs text-white uppercase tracking-wider">{item.name}</h4>
+                    <p className="text-[10px] text-zinc-500 leading-normal">{item.description}</p>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-900/70 space-y-1 text-[10px] font-bold text-zinc-400">
+                    <div>Owned: {ownedCount}</div>
+                    <div className="text-neon-cyan">+{Math.round(item.viewMultiplierBonus * 100)}% views each</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Row 2: Badges Accomplishments */}

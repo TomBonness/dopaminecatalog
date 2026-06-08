@@ -7,14 +7,15 @@ import { ChevronRight } from "lucide-react";
 import {
   summarizeMukbangOrder,
   buildFoodDisplayItems,
-  calculateMukbangPayout,
+  calculateMukbangViews,
   FoodDisplayItem,
   PhaseResult
 } from "@/lib/mukbang";
 
 interface MukbangExperienceProps {
   activeOrder: Order;
-  onComplete: (result: { payout: number; score: number }) => void;
+  viewMultiplier: number;
+  onComplete: (result: { payout: number; score: number; views: number; viewMultiplier: number }) => void;
 }
 
 type VideoPhase = "intro" | "plating" | "bite" | "hype" | "result";
@@ -35,7 +36,7 @@ const CHAT_PROMPTS: ChatPrompt[] = [
   { text: "DRINK WATER!", emoji: "🥤" },
 ];
 
-export function MukbangExperience({ activeOrder, onComplete }: MukbangExperienceProps) {
+export function MukbangExperience({ activeOrder, viewMultiplier, onComplete }: MukbangExperienceProps) {
   const { play } = useAudio();
 
   const [videoPhase, setVideoPhase] = useState<VideoPhase>("intro");
@@ -57,9 +58,14 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
     score: number;
     accuracy: number;
     payout: number;
+    views: number;
+    baseViews: number;
+    inventoryMultiplier: number;
     perfect: boolean;
     duration: number;
   } | null>(null);
+  const [animatedViews, setAnimatedViews] = useState<number>(0);
+  const [viewsAnimationDone, setViewsAnimationDone] = useState<boolean>(false);
 
   const lastOrderId = useRef<string | null>(null);
 
@@ -85,6 +91,8 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
       setBiteResult(null);
       setHypeResult(null);
       setMukbangResult(null);
+      setAnimatedViews(0);
+      setViewsAnimationDone(false);
     }
   }, [activeOrder.id]);
 
@@ -176,14 +184,17 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
         const orderCost = activeOrder.orderCost || 15;
         const summary = orderSummary;
         const allResults = [platingResult!, biteResult!, currentHypeResult];
-        const finalPayout = calculateMukbangPayout(orderCost, summary, allResults);
+        const viewsResult = calculateMukbangViews(orderCost, summary, allResults, viewMultiplier);
         const avgScore = Math.round((platingResult!.score + biteResult!.score + currentHypeResult.score) / 3);
         const avgMistakes = (platingResult!.mistakes + biteResult!.mistakes + currentHypeResult.mistakes) / 3;
         const totalMistakes = platingResult!.mistakes + biteResult!.mistakes + currentHypeResult.mistakes;
         setMukbangResult({
           score: avgScore,
           accuracy: totalMistakes === 0 ? 100 : Math.max(10, Math.round((1 - avgMistakes / 5) * 100)),
-          payout: finalPayout,
+          payout: viewsResult.payout,
+          views: viewsResult.finalViews,
+          baseViews: viewsResult.baseViews,
+          inventoryMultiplier: viewsResult.inventoryMultiplier,
           perfect: totalMistakes === 0,
           duration: 0
         });
@@ -217,6 +228,43 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [videoPhase, mukbangResult, biteProgress, biteSequence, biteMistakes]);
 
+  useEffect(() => {
+    if (videoPhase !== "result" || !mukbangResult) return;
+
+    let animationFrame = 0;
+    let startedAt: number | null = null;
+    const durationMs = 1400;
+
+    setAnimatedViews(0);
+    setViewsAnimationDone(false);
+
+    const animateViews = (timestamp: number) => {
+      if (startedAt === null) {
+        startedAt = timestamp;
+      }
+
+      const progress = Math.min(1, (timestamp - startedAt) / durationMs);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedViews(Math.round(mukbangResult.views * eased));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animateViews);
+        return;
+      }
+
+      setAnimatedViews(mukbangResult.views);
+      setViewsAnimationDone(true);
+    };
+
+    animationFrame = requestAnimationFrame(animateViews);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [videoPhase, mukbangResult]);
+
+  const liveViewPreview = Math.round(
+    (1200 + (activeOrder.orderCost || 15) * 150 + platingProgress * 1500) * Math.max(1, viewMultiplier || 1)
+  );
+
   return (
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
@@ -231,7 +279,7 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
               <span className="text-[10px] font-black text-neon-pink tracking-widest uppercase">REC</span>
             </div>
             <div className="text-[9px] font-bold text-zinc-400 bg-black/60 px-2 py-1 rounded-md border border-zinc-800 pointer-events-auto">
-              LIVE VIEWS: {(1200 + (activeOrder.orderCost || 15) * 150 + platingProgress * 1500).toLocaleString()}
+              LIVE VIEWS: {liveViewPreview.toLocaleString()}
             </div>
           </div>
 
@@ -434,12 +482,26 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
               Your three-phase mukbang stream went viral! Here is your performance breakdown:
             </p>
           </div>
+          <div className="rounded-xl border border-neon-pink/40 bg-neon-pink/10 p-4 space-y-2">
+            <div className="text-[9px] font-black uppercase tracking-[0.25em] text-neon-pink">
+              YOUTUBE PREMIERE REPORT
+            </div>
+            <div className="text-3xl sm:text-4xl font-black text-white tabular-nums">
+              {animatedViews.toLocaleString()} views
+            </div>
+            <div className="text-xs font-bold text-neon-yellow">
+              Inventory Boost x{mukbangResult.inventoryMultiplier.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-zinc-500">
+              Base Audience: {mukbangResult.baseViews.toLocaleString()}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-3.5 rounded-xl border border-zinc-850 text-xs text-left">
             <div className="text-zinc-500 font-medium">Avg Clout Score:</div>
             <div className="font-black text-white text-right">{mukbangResult.score}/100</div>
             <div className="text-zinc-500 font-medium">Overall Accuracy:</div>
             <div className="font-black text-white text-right">{mukbangResult.accuracy}%</div>
-            <div className="text-zinc-400 font-bold border-t border-zinc-850 pt-2 mt-1">Creator Payout:</div>
+            <div className="text-zinc-400 font-bold border-t border-zinc-850 pt-2 mt-1">View-Based Creator Payout:</div>
             <div className="font-black text-neon-yellow text-right border-t border-zinc-850 pt-2 mt-1 text-base">
               {formatCash(mukbangResult.payout)}
             </div>
@@ -477,10 +539,18 @@ export function MukbangExperience({ activeOrder, onComplete }: MukbangExperience
             </div>
           )}
           <button
-            onClick={() => onComplete({ payout: mukbangResult.payout, score: mukbangResult.score })}
-            className="w-full py-4 px-2 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-black bg-neon-green shadow-[0_0_15px_rgba(57,255,20,0.3)] hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+            disabled={!viewsAnimationDone}
+            onClick={() =>
+              onComplete({
+                payout: mukbangResult.payout,
+                score: mukbangResult.score,
+                views: mukbangResult.views,
+                viewMultiplier: mukbangResult.inventoryMultiplier,
+              })
+            }
+            className="w-full py-4 px-2 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-black bg-neon-green shadow-[0_0_15px_rgba(57,255,20,0.3)] hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-[0_0_15px_rgba(57,255,20,0.3)]"
           >
-            <span className="text-center truncate">Collect Payout & Go to Rewards</span>
+            <span className="text-center truncate">{viewsAnimationDone ? "Collect Payout & Go to Rewards" : "Counting Views..."}</span>
             <ChevronRight className="h-4 w-4 shrink-0" />
           </button>
         </div>

@@ -1,4 +1,5 @@
 import { CartItem } from "@/context/StateContext";
+import type { ViewInventoryReward } from "@/lib/viewInventory";
 
 export interface MukbangOrderSummary {
   totalQuantity: number;
@@ -160,15 +161,7 @@ export interface PhaseResult {
   perfect: boolean;
 }
 
-export function calculateMukbangPayout(
-  orderCost: number,
-  summary: MukbangOrderSummary,
-  phaseResults: PhaseResult[]
-): number {
-  // Content multiplier combines diversity and quantity
-  const contentMultiplier = summary.diversityMultiplier * summary.quantityMultiplier;
-
-  // Performance multiplier from the 3 phases
+export function calculateMukbangPerformanceMultiplier(phaseResults: PhaseResult[]): number {
   let totalScore = 0;
   let totalMistakes = 0;
   let perfectPhases = 0;
@@ -181,25 +174,65 @@ export function calculateMukbangPayout(
     }
   }
 
-  const avgScorePercent = phaseResults.length > 0 ? (totalScore / (phaseResults.length * 100)) : 0;
-  const avgMistakes = phaseResults.length > 0 ? (totalMistakes / phaseResults.length) : 0;
+  const avgScorePercent = phaseResults.length > 0 ? totalScore / (phaseResults.length * 100) : 0;
+  const avgMistakes = phaseResults.length > 0 ? totalMistakes / phaseResults.length : 0;
+  const perfMultiplier = 0.5 + avgScorePercent * 0.6 - avgMistakes * 0.05 + perfectPhases * 0.08;
 
-  // Performance multiplier formula:
-  // Base from score percent (0.5 to 1.1)
-  // Mistake penalty: -0.05 per average mistake
-  // Perfect phase bonus: +0.08 per perfect phase
-  let perfMultiplier = 0.5 + avgScorePercent * 0.6 - avgMistakes * 0.05 + perfectPhases * 0.08;
+  return Math.max(0.3, Math.min(2.0, perfMultiplier));
+}
 
-  // Bounds
-  perfMultiplier = Math.max(0.3, Math.min(2.0, perfMultiplier));
+export interface MukbangViewsResult {
+  baseViews: number;
+  contentMultiplier: number;
+  performanceMultiplier: number;
+  inventoryMultiplier: number;
+  finalViews: number;
+  payout: number;
+}
 
-  const rawPayout = orderCost * contentMultiplier * perfMultiplier;
+export function calculateMukbangPayoutFromViews(views: number): number {
+  const rawPayout = views * 0.006;
+  const clampedPayout = Math.max(5, Math.min(10000, rawPayout));
 
-  // Bound final payout: minimum 5, max 3.5x orderCost or 1000
-  const maxPayout = Math.min(1000, Math.max(50, orderCost * 3.5));
-  const finalPayout = Math.max(5.0, Math.min(maxPayout, rawPayout));
+  return Math.round(clampedPayout * 100) / 100;
+}
 
-  return Math.round(finalPayout * 100) / 100;
+export function calculateMukbangViews(
+  orderCost: number,
+  summary: MukbangOrderSummary,
+  phaseResults: PhaseResult[],
+  inventoryMultiplier: number = 1
+): MukbangViewsResult {
+  const safeOrderCost = Math.max(0, orderCost || 0);
+  const baseViews = Math.round(
+    1200 + safeOrderCost * 150 + summary.totalQuantity * 600 + summary.foodTypeCount * 900
+  );
+  const contentMultiplier = summary.diversityMultiplier * summary.quantityMultiplier;
+  const performanceMultiplier = calculateMukbangPerformanceMultiplier(phaseResults);
+  const safeInventoryMultiplier = Math.max(1, Math.min(3, inventoryMultiplier || 1));
+  const finalViews = Math.max(
+    100,
+    Math.round(baseViews * contentMultiplier * performanceMultiplier * safeInventoryMultiplier)
+  );
+  const payout = calculateMukbangPayoutFromViews(finalViews);
+
+  return {
+    baseViews,
+    contentMultiplier,
+    performanceMultiplier,
+    inventoryMultiplier: safeInventoryMultiplier,
+    finalViews,
+    payout,
+  };
+}
+
+export function calculateMukbangPayout(
+  orderCost: number,
+  summary: MukbangOrderSummary,
+  phaseResults: PhaseResult[],
+  inventoryMultiplier: number = 1
+): number {
+  return calculateMukbangViews(orderCost, summary, phaseResults, inventoryMultiplier).payout;
 }
 
 export interface SlotResult {
@@ -207,6 +240,7 @@ export interface SlotResult {
   payout: number;
   xpReward: number;
   message: string;
+  inventoryReward?: ViewInventoryReward;
 }
 
 export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResult {
@@ -223,6 +257,7 @@ export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResu
       payout: 500,
       xpReward: 500,
       message: "💎 TRIPLE DIAMOND JACKPOT! 💎",
+      inventoryReward: { itemId: "viral-edit-kit", quantity: 1 },
     };
   }
 
@@ -233,6 +268,7 @@ export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResu
       payout: 250,
       xpReward: 250,
       message: `🍔 Triple Food Feast! +$250 🍔`,
+      inventoryReward: { itemId: "algorithm-charm", quantity: 1 },
     };
   }
 
@@ -243,6 +279,7 @@ export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResu
       payout: 120,
       xpReward: 120,
       message: `🎉 Triple Match! +$120 🎉`,
+      inventoryReward: { itemId: "ring-light-array", quantity: 1 },
     };
   }
 
@@ -256,6 +293,7 @@ export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResu
       payout: 80,
       xpReward: 100,
       message: "🥤 Fast Food Combo! +$80 🍟",
+      inventoryReward: { itemId: "hashtag-amplifier", quantity: 1 },
     };
   }
 
@@ -269,6 +307,7 @@ export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResu
       payout: 150,
       xpReward: 150,
       message: "🌮 World Tour Combo! +$150 🍕",
+      inventoryReward: { itemId: "algorithm-charm", quantity: 1 },
     };
   }
 
@@ -286,6 +325,7 @@ export function evaluateSlotSpin(symbols: string[], cost: number = 50): SlotResu
       payout,
       xpReward,
       message: `✨ Double Match! +$${payout} ✨`,
+      inventoryReward: { itemId: "thumbnail-polish", quantity: 1 },
     };
   }
 

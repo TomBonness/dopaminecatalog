@@ -9,7 +9,7 @@ import { ShieldAlert, ArrowLeft, Video } from "lucide-react";
 
 export default function MukbangPage() {
   const router = useRouter();
-  const { activeOrder, completeActiveOrder } = useAppState();
+  const { activeOrder, completeActiveOrder, viewMultiplier } = useAppState();
 
   const isCompleted = activeOrder?.status === "completed" || (activeOrder?.deliveryProgress ?? 0) >= 100;
 
@@ -69,6 +69,7 @@ export default function MukbangPage() {
 
       <MukbangExperience
         activeOrder={activeOrder}
+        viewMultiplier={viewMultiplier}
         onComplete={(result) => {
           completeActiveOrder(result);
           router.push("/rewards");

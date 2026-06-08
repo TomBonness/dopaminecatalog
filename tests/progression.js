@@ -458,8 +458,35 @@ function testNewEconomyAndScrambling() {
       quantityMultiplier,
     };
   }
-  function calculateMukbangPayout(orderCost, summary, phaseResults) {
-    const contentMultiplier = summary.diversityMultiplier * summary.quantityMultiplier;
+  const VIEW_INVENTORY_ORDER = [
+    "thumbnail-polish",
+    "hashtag-amplifier",
+    "ring-light-array",
+    "algorithm-charm",
+    "viral-edit-kit",
+  ];
+  const VIEW_INVENTORY_ITEMS = {
+    "thumbnail-polish": { viewMultiplierBonus: 0.05 },
+    "hashtag-amplifier": { viewMultiplierBonus: 0.08 },
+    "ring-light-array": { viewMultiplierBonus: 0.12 },
+    "algorithm-charm": { viewMultiplierBonus: 0.20 },
+    "viral-edit-kit": { viewMultiplierBonus: 0.35 },
+  };
+  const EMPTY_VIEW_INVENTORY = {
+    "thumbnail-polish": 0,
+    "hashtag-amplifier": 0,
+    "ring-light-array": 0,
+    "algorithm-charm": 0,
+    "viral-edit-kit": 0,
+  };
+  const MAX_VIEW_INVENTORY_MULTIPLIER = 3;
+  function getViewInventoryMultiplier(inventory) {
+    const rawMultiplier = VIEW_INVENTORY_ORDER.reduce((multiplier, itemId) => {
+      return multiplier + Math.max(0, Math.floor(inventory[itemId] || 0)) * VIEW_INVENTORY_ITEMS[itemId].viewMultiplierBonus;
+    }, 1);
+    return Math.min(MAX_VIEW_INVENTORY_MULTIPLIER, Math.round(rawMultiplier * 100) / 100);
+  }
+  function calculateMukbangPerformanceMultiplier(phaseResults) {
     let totalScore = 0;
     let totalMistakes = 0;
     let perfectPhases = 0;
@@ -470,15 +497,46 @@ function testNewEconomyAndScrambling() {
         perfectPhases++;
       }
     }
-    const avgScorePercent = phaseResults.length > 0 ? (totalScore / (phaseResults.length * 100)) : 0;
-    const avgMistakes = phaseResults.length > 0 ? (totalMistakes / phaseResults.length) : 0;
-    let perfMultiplier = 0.5 + avgScorePercent * 0.6 - avgMistakes * 0.05 + perfectPhases * 0.08;
-    perfMultiplier = Math.max(0.3, Math.min(2.0, perfMultiplier));
-    const rawPayout = orderCost * contentMultiplier * perfMultiplier;
-    const maxPayout = Math.min(1000, Math.max(50, orderCost * 3.5));
-    const finalPayout = Math.max(5.0, Math.min(maxPayout, rawPayout));
-    return Math.round(finalPayout * 100) / 100;
+    const avgScorePercent = phaseResults.length > 0 ? totalScore / (phaseResults.length * 100) : 0;
+    const avgMistakes = phaseResults.length > 0 ? totalMistakes / phaseResults.length : 0;
+    const perfMultiplier = 0.5 + avgScorePercent * 0.6 - avgMistakes * 0.05 + perfectPhases * 0.08;
+    return Math.max(0.3, Math.min(2.0, perfMultiplier));
   }
+  function calculateMukbangPayoutFromViews(views) {
+    const rawPayout = views * 0.006;
+    const clampedPayout = Math.max(5, Math.min(10000, rawPayout));
+    return Math.round(clampedPayout * 100) / 100;
+  }
+  function calculateMukbangViews(orderCost, summary, phaseResults, inventoryMultiplier = 1) {
+    const safeOrderCost = Math.max(0, orderCost || 0);
+    const baseViews = Math.round(1200 + safeOrderCost * 150 + summary.totalQuantity * 600 + summary.foodTypeCount * 900);
+    const contentMultiplier = summary.diversityMultiplier * summary.quantityMultiplier;
+    const performanceMultiplier = calculateMukbangPerformanceMultiplier(phaseResults);
+    const safeInventoryMultiplier = Math.max(1, Math.min(3, inventoryMultiplier || 1));
+    const finalViews = Math.max(100, Math.round(baseViews * contentMultiplier * performanceMultiplier * safeInventoryMultiplier));
+    const payout = calculateMukbangPayoutFromViews(finalViews);
+    return {
+      baseViews,
+      contentMultiplier,
+      performanceMultiplier,
+      inventoryMultiplier: safeInventoryMultiplier,
+      finalViews,
+      payout,
+    };
+  }
+  function calculateMukbangPayout(orderCost, summary, phaseResults, inventoryMultiplier = 1) {
+    return calculateMukbangViews(orderCost, summary, phaseResults, inventoryMultiplier).payout;
+  }
+  assert.strictEqual(getViewInventoryMultiplier(EMPTY_VIEW_INVENTORY), 1);
+  assert.strictEqual(getViewInventoryMultiplier({
+    ...EMPTY_VIEW_INVENTORY,
+    "thumbnail-polish": 1,
+    "algorithm-charm": 1,
+  }), 1.25);
+  assert.strictEqual(getViewInventoryMultiplier({
+    ...EMPTY_VIEW_INVENTORY,
+    "viral-edit-kit": 99,
+  }), 3);
   const lowDivItems = [{ id: "burger-1", name: "Glitch Burger", quantity: 1 }];
   const summaryA = summarizeMukbangOrder(lowDivItems);
   assert.strictEqual(summaryA.foodTypeCount, 1);
@@ -488,8 +546,7 @@ function testNewEconomyAndScrambling() {
     { score: 100, mistakes: 0, perfect: true },
     { score: 100, mistakes: 0, perfect: true }
   ];
-  const payoutA = calculateMukbangPayout(15, summaryA, resultsA);
-  assert.ok(payoutA < 15, `Low diversity should underperform cost. Payout: ${payoutA}`);
+  const viewsA = calculateMukbangViews(15, summaryA, resultsA);
   const highDivItems = [
     { id: "burger-1", name: "Glitch Burger", quantity: 1 },
     { id: "fries-1", name: "Sadness Destroyer Fries", quantity: 1 },
@@ -503,35 +560,46 @@ function testNewEconomyAndScrambling() {
     { score: 95, mistakes: 0, perfect: true },
     { score: 90, mistakes: 1, perfect: false }
   ];
-  const payoutB = calculateMukbangPayout(25, summaryB, resultsB);
-  assert.ok(payoutB > 25, `Diverse order with good play should be profitable. Payout: ${payoutB}`);
+  const viewsB = calculateMukbangViews(25, summaryB, resultsB);
+  assert.ok(viewsB.finalViews > viewsA.finalViews, `Diverse order should earn more views. Low: ${viewsA.finalViews}, high: ${viewsB.finalViews}`);
+  assert.ok(viewsB.payout > viewsA.payout, `Diverse order should pay more from views. Low: ${viewsA.payout}, high: ${viewsB.payout}`);
+  const boostedViewsB = calculateMukbangViews(25, summaryB, resultsB, 1.25);
+  assert.ok(boostedViewsB.finalViews > viewsB.finalViews, `Inventory should increase views. Base: ${viewsB.finalViews}, boosted: ${boostedViewsB.finalViews}`);
+  assert.ok(boostedViewsB.payout > viewsB.payout, `Inventory should increase payout. Base: ${viewsB.payout}, boosted: ${boostedViewsB.payout}`);
+  assert.strictEqual(calculateMukbangPayout(25, summaryB, resultsB, 1.25), boostedViewsB.payout);
   // 4. Slot Machine Evaluation Test
   function evaluateSlotSpin(symbols) {
     const [s1, s2, s3] = symbols;
     if (s1 === "💎" && s2 === "💎" && s3 === "💎") {
-      return { payout: 500, xpReward: 500 };
+      return { payout: 500, xpReward: 500, inventoryReward: { itemId: "viral-edit-kit", quantity: 1 } };
     }
     if (s1 === s2 && s2 === s3 && ["🍔", "🍕", "🍣"].includes(s1)) {
-      return { payout: 250, xpReward: 250 };
+      return { payout: 250, xpReward: 250, inventoryReward: { itemId: "algorithm-charm", quantity: 1 } };
     }
     if (s1 === s2 && s2 === s3) {
-      return { payout: 120, xpReward: 120 };
+      return { payout: 120, xpReward: 120, inventoryReward: { itemId: "ring-light-array", quantity: 1 } };
     }
     const hasBurger = symbols.includes("🍔");
     const hasFries = symbols.includes("🍟");
     const hasDrink = symbols.includes("🥤");
     if (hasBurger && hasFries && hasDrink) {
-      return { payout: 80, xpReward: 100 };
+      return { payout: 80, xpReward: 100, inventoryReward: { itemId: "hashtag-amplifier", quantity: 1 } };
+    }
+    const hasSushi = symbols.includes("🍣");
+    const hasPizza = symbols.includes("🍕");
+    const hasTaco = symbols.includes("🌮");
+    if (hasSushi && hasPizza && hasTaco) {
+      return { payout: 150, xpReward: 150, inventoryReward: { itemId: "algorithm-charm", quantity: 1 } };
     }
     if (s1 === s2 || s2 === s3 || s1 === s3) {
-      return { payout: 35, xpReward: 20 };
+      return { payout: 35, xpReward: 20, inventoryReward: { itemId: "thumbnail-polish", quantity: 1 } };
     }
     return { payout: 0, xpReward: 5 };
   }
-  assert.deepStrictEqual(evaluateSlotSpin(["💎", "💎", "💎"]), { payout: 500, xpReward: 500 });
-  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍔", "🍔"]), { payout: 250, xpReward: 250 });
-  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍟", "🥤"]), { payout: 80, xpReward: 100 });
-  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍔", "🍕"]), { payout: 35, xpReward: 20 });
+  assert.deepStrictEqual(evaluateSlotSpin(["💎", "💎", "💎"]), { payout: 500, xpReward: 500, inventoryReward: { itemId: "viral-edit-kit", quantity: 1 } });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍔", "🍔"]), { payout: 250, xpReward: 250, inventoryReward: { itemId: "algorithm-charm", quantity: 1 } });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍟", "🥤"]), { payout: 80, xpReward: 100, inventoryReward: { itemId: "hashtag-amplifier", quantity: 1 } });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍔", "🍕"]), { payout: 35, xpReward: 20, inventoryReward: { itemId: "thumbnail-polish", quantity: 1 } });
   assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍕", "🍣"]), { payout: 0, xpReward: 5 });
   // 5. Completed Order Stability Test
   function resolveIncidentForOrder(order, success) {
