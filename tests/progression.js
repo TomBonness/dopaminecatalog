@@ -346,8 +346,7 @@ function testRouteInterpolation() {
   console.log('✓ Route interpolation is correct.');
 }
 function testNewEconomyAndScrambling() {
-  console.log('- Testing New Economy, Mukbang Payout, and Option Scrambling...');
-
+  console.log('- Testing New Economy, Mukbang Payout, Option Scrambling, Slot Machine, and Completed Stability...');
   // 1. Scramble Options Test
   function scrambleOptions(sequence, allSymbols) {
     const decoys = allSymbols.filter(s => !sequence.includes(s));
@@ -382,11 +381,9 @@ function testNewEconomyAndScrambling() {
     }
     return shuffled;
   }
-
   const sequence = ["▲", "▼", "◀"];
   const allSymbols = ["▲", "▼", "◀", "▶", "●", "■"];
   const scrambled = scrambleOptions(sequence, allSymbols);
-
   for (const s of sequence) {
     assert(scrambled.includes(s), `Scrambled options must contain ${s}`);
   }
@@ -399,7 +396,6 @@ function testNewEconomyAndScrambling() {
     }
   }
   assert(!identical, "Scrambled options must not match sequence order exactly");
-
   // 2. Checkout Affordability Test
   let dopamineCoins = 100;
   function simulateCheckout(orderCost) {
@@ -413,29 +409,152 @@ function testNewEconomyAndScrambling() {
   assert.strictEqual(dopamineCoins, 100);
   assert.strictEqual(simulateCheckout(80), true);
   assert.strictEqual(dopamineCoins, 20);
-
-  // 3. Mukbang Payout Test
-  function calculateMukbangPayout(orderCost, mistakes, durationSec) {
-    const basePayout = orderCost * 1.15;
-    const accuracy = mistakes === 0 ? 1.2 : Math.max(0.2, 1 - mistakes * 0.15);
-    let speedMult = 0.8;
-    if (durationSec < 4) {
-      speedMult = 1.3;
-    } else if (durationSec < 7) {
-      speedMult = 1.1;
+  // 3. New Mukbang Payout Formula Test
+  function summarizeMukbangOrder(items) {
+    let totalQuantity = 0;
+    const uniqueItems = new Set();
+    const foodTypes = new Set();
+    function classifyFoodType(item) {
+      const name = item.name.toLowerCase();
+      const id = item.id.toLowerCase();
+      if (name.includes("burger") || id.includes("burger")) return "burger";
+      if (name.includes("fry") || name.includes("fries") || id.includes("fry") || id.includes("fries")) return "fries";
+      if (name.includes("sushi") || name.includes("roll")) return "sushi";
+      if (name.includes("pizza") || id.includes("pizza")) return "pizza";
+      if (name.includes("taco")) return "taco";
+      if (name.includes("dessert") || name.includes("shake")) return "dessert";
+      if (name.includes("drink") || name.includes("cola")) return "drink";
+      return "other";
     }
-    const rawMultiplier = accuracy * speedMult;
-    const multiplier = Math.max(0.5, Math.min(2.25, rawMultiplier));
-    return Math.round(basePayout * multiplier * 100) / 100;
+    for (const item of items) {
+      totalQuantity += item.quantity;
+      uniqueItems.add(item.id);
+      foodTypes.add(classifyFoodType(item));
+    }
+    const uniqueItemCount = uniqueItems.size;
+    const foodTypeCount = foodTypes.size;
+    let diversityMultiplier = 1.0;
+    if (foodTypeCount === 0 || foodTypeCount === 1) {
+      diversityMultiplier = 0.5;
+    } else if (foodTypeCount === 2) {
+      diversityMultiplier = 0.8;
+    } else if (foodTypeCount === 3) {
+      diversityMultiplier = 1.1;
+    } else {
+      diversityMultiplier = Math.min(1.6, 1.3 + (foodTypeCount - 4) * 0.1);
+    }
+    if (uniqueItemCount > foodTypeCount) {
+      diversityMultiplier += (uniqueItemCount - foodTypeCount) * 0.05;
+    }
+    let quantityMultiplier = 1.0;
+    if (totalQuantity > 1) {
+      quantityMultiplier = Math.min(1.8, 1.0 + (totalQuantity - 1) * 0.08);
+    }
+    return {
+      totalQuantity,
+      uniqueItemCount,
+      foodTypeCount,
+      diversityMultiplier,
+      quantityMultiplier,
+    };
   }
-
-  const perfectPayout = calculateMukbangPayout(50, 0, 3);
-  assert.strictEqual(perfectPayout, 89.7);
-
-  const slowPayout = calculateMukbangPayout(50, 4, 12);
-  assert.strictEqual(slowPayout, 28.75);
-
-  console.log('✓ New Economy, Mukbang Payout, and Option Scrambling are correct.');
+  function calculateMukbangPayout(orderCost, summary, phaseResults) {
+    const contentMultiplier = summary.diversityMultiplier * summary.quantityMultiplier;
+    let totalScore = 0;
+    let totalMistakes = 0;
+    let perfectPhases = 0;
+    for (const res of phaseResults) {
+      totalScore += res.score;
+      totalMistakes += res.mistakes;
+      if (res.perfect) {
+        perfectPhases++;
+      }
+    }
+    const avgScorePercent = phaseResults.length > 0 ? (totalScore / (phaseResults.length * 100)) : 0;
+    const avgMistakes = phaseResults.length > 0 ? (totalMistakes / phaseResults.length) : 0;
+    let perfMultiplier = 0.5 + avgScorePercent * 0.6 - avgMistakes * 0.05 + perfectPhases * 0.08;
+    perfMultiplier = Math.max(0.3, Math.min(2.0, perfMultiplier));
+    const rawPayout = orderCost * contentMultiplier * perfMultiplier;
+    const maxPayout = Math.min(1000, Math.max(50, orderCost * 3.5));
+    const finalPayout = Math.max(5.0, Math.min(maxPayout, rawPayout));
+    return Math.round(finalPayout * 100) / 100;
+  }
+  const lowDivItems = [{ id: "burger-1", name: "Glitch Burger", quantity: 1 }];
+  const summaryA = summarizeMukbangOrder(lowDivItems);
+  assert.strictEqual(summaryA.foodTypeCount, 1);
+  assert.strictEqual(summaryA.diversityMultiplier, 0.5);
+  const resultsA = [
+    { score: 100, mistakes: 0, perfect: true },
+    { score: 100, mistakes: 0, perfect: true },
+    { score: 100, mistakes: 0, perfect: true }
+  ];
+  const payoutA = calculateMukbangPayout(15, summaryA, resultsA);
+  assert.ok(payoutA < 15, `Low diversity should underperform cost. Payout: ${payoutA}`);
+  const highDivItems = [
+    { id: "burger-1", name: "Glitch Burger", quantity: 1 },
+    { id: "fries-1", name: "Sadness Destroyer Fries", quantity: 1 },
+    { id: "drink-1", name: "Soda", quantity: 1 }
+  ];
+  const summaryB = summarizeMukbangOrder(highDivItems);
+  assert.strictEqual(summaryB.foodTypeCount, 3);
+  assert.strictEqual(summaryB.diversityMultiplier, 1.1);
+  const resultsB = [
+    { score: 90, mistakes: 1, perfect: false },
+    { score: 95, mistakes: 0, perfect: true },
+    { score: 90, mistakes: 1, perfect: false }
+  ];
+  const payoutB = calculateMukbangPayout(25, summaryB, resultsB);
+  assert.ok(payoutB > 25, `Diverse order with good play should be profitable. Payout: ${payoutB}`);
+  // 4. Slot Machine Evaluation Test
+  function evaluateSlotSpin(symbols) {
+    const [s1, s2, s3] = symbols;
+    if (s1 === "💎" && s2 === "💎" && s3 === "💎") {
+      return { payout: 500, xpReward: 500 };
+    }
+    if (s1 === s2 && s2 === s3 && ["🍔", "🍕", "🍣"].includes(s1)) {
+      return { payout: 250, xpReward: 250 };
+    }
+    if (s1 === s2 && s2 === s3) {
+      return { payout: 120, xpReward: 120 };
+    }
+    const hasBurger = symbols.includes("🍔");
+    const hasFries = symbols.includes("🍟");
+    const hasDrink = symbols.includes("🥤");
+    if (hasBurger && hasFries && hasDrink) {
+      return { payout: 80, xpReward: 100 };
+    }
+    if (s1 === s2 || s2 === s3 || s1 === s3) {
+      return { payout: 35, xpReward: 20 };
+    }
+    return { payout: 0, xpReward: 5 };
+  }
+  assert.deepStrictEqual(evaluateSlotSpin(["💎", "💎", "💎"]), { payout: 500, xpReward: 500 });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍔", "🍔"]), { payout: 250, xpReward: 250 });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍟", "🥤"]), { payout: 80, xpReward: 100 });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍔", "🍕"]), { payout: 35, xpReward: 20 });
+  assert.deepStrictEqual(evaluateSlotSpin(["🍔", "🍕", "🍣"]), { payout: 0, xpReward: 5 });
+  // 5. Completed Order Stability Test
+  function resolveIncidentForOrder(order, success) {
+    if (order.status === "completed") {
+      return order;
+    }
+    let nextProgress = order.deliveryProgress;
+    if (success) {
+      nextProgress = Math.min(nextProgress + 10, 100);
+    } else {
+      nextProgress = Math.max(0, nextProgress - 10);
+    }
+    return {
+      ...order,
+      deliveryProgress: nextProgress,
+      status: nextProgress >= 100 ? "completed" : order.status
+    };
+  }
+  const completeOrderObj = { status: "completed", deliveryProgress: 100 };
+  const resolveCompletedFailure = resolveIncidentForOrder(completeOrderObj, false);
+  assert.strictEqual(resolveCompletedFailure.status, "completed", "Should remain completed");
+  assert.strictEqual(resolveCompletedFailure.deliveryProgress, 100, "Should remain 100%");
+  console.log('✓ New Economy, Mukbang Payout, Option Scrambling, Slot Machine, and Completed Stability are correct.');
 }
 testQuests();
 testIncidentsAndUpgrades();

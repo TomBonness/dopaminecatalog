@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
           
           {/* Logo / Title */}
           <Link href="/" className="flex items-center space-x-2 shrink-0">
-            <span className="text-lg sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan select-none text-neon-glow-pink">
+            <span className="text-sm xs:text-lg sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan select-none text-neon-glow-pink">
               DOPAMINE
             </span>
             <span className="hidden sm:inline-block text-xs font-bold px-2 py-0.5 rounded bg-zinc-900 border border-neon-cyan text-neon-cyan uppercase tracking-widest text-neon-glow-cyan animate-pulse">
@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
           </div>
 
           {/* Navigation & Controls */}
-          <nav className="flex items-center space-x-1.5 sm:space-x-4">
+          <nav className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
             {/* Dopamine Rush Countdown Badge */}
             {dopamineRushActive && (
               <div className="h-8 sm:h-10 flex items-center justify-center space-x-1 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-black border border-neon-pink text-neon-pink shadow-[0_0_10px_rgba(255,0,127,0.3)] animate-pulse select-none shrink-0 font-black text-[10px] sm:text-xs">
@@ -83,13 +83,13 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
 
             {/* Owned Perks Indicator */}
             {ownedUpgrades && ownedUpgrades.length > 0 && (
-              <div className="h-8 sm:h-10 hidden xs:flex items-center justify-center space-x-1 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-green/30 text-neon-green shadow-[0_0_10px_rgba(57,255,20,0.15)] select-none shrink-0">
+              <div className="h-8 sm:h-10 hidden sm:flex items-center justify-center space-x-1 px-2 sm:px-2.5 rounded-lg sm:rounded-xl bg-zinc-900 border border-neon-green/30 text-neon-green shadow-[0_0_10px_rgba(57,255,20,0.15)] select-none shrink-0">
                 <span className="text-[10px] sm:text-xs font-black">⚡ {ownedUpgrades.length} Part{ownedUpgrades.length > 1 ? "s" : ""}</span>
               </div>
             )}
 
             {/* Mobile Level Pill */}
-            <div className="md:hidden h-8 sm:h-10 flex items-center justify-center px-2 sm:px-3 rounded-lg sm:rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-neon-cyan shrink-0">
+            <div className="hidden xs:flex md:hidden h-8 sm:h-10 items-center justify-center px-2 sm:px-3 rounded-lg sm:rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-neon-cyan shrink-0">
               Lvl {level}
             </div>
 
@@ -123,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartOpen }) => {
             )}
 
             {/* Divider */}
-            <div className="h-6 w-[1px] bg-zinc-800" />
+            <div className="hidden sm:block h-6 w-[1px] bg-zinc-800" />
 
             {/* Cart Button */}
             <button

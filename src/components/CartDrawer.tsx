@@ -187,13 +187,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     </div>
 
                   </div>
-                  <div className="p-3.5 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-bold flex items-center space-x-2.5">
-                    <span>💵</span>
-                    <span>
-                      Paid from your creator bankroll — no real checkout.
-                    </span>
-                  </div>
-
                   <button
                     onClick={handleCheckout}
                     disabled={dopamineCoins < total}

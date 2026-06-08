@@ -979,10 +979,12 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           break;
         }
       }
-      if (incidentToTrigger && !activeIncident) {
+      if (incidentToTrigger && !activeIncident && nextProgress < 100) {
         activeIncident = createIncident(incidentToTrigger, currentLevel, ownedUpgrades);
       }
-
+      if (nextProgress >= 100) {
+        activeIncident = null;
+      }
       if (newClicks >= 20) {
         setTimeout(() => unlockBadge("speed-demon"), 200);
       }
@@ -1000,7 +1002,9 @@ export const StateProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resolveIncident = useCallback((success: boolean) => {
     const currentLevel = Math.floor(points / 500) + 1;
     setActiveOrder(prev => {
-      if (!prev || !prev.activeIncident) return prev;
+      if (!prev) return null;
+      if (prev.status === "completed") return prev;
+      if (!prev.activeIncident) return prev;
       const type = prev.activeIncident.type;
       let newStreak = prev.incidentStreak || 0;
       let resolvedCount = prev.resolvedIncidentCount || 0;
